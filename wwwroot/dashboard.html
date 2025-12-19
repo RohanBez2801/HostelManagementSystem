@@ -1,0 +1,228 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hostel Intelligence | Professional Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="logo-area">HostelPro <small style="display:block; font-size:10px; opacity:0.6;">Intelligence System</small></div>
+        <nav class="nav-links">
+            <div class="nav-label">Core</div>
+            <div class="nav-item active" onclick="showView('overview', this)"><i class="fas fa-th-large"></i> Dashboard</div>
+            <div class="nav-item" onclick="showView('rooms', this)"><i class="fas fa-door-open"></i> Room Mapping</div>
+
+            <div class="nav-label">People</div>
+            <div class="nav-item" onclick="showView('learners', this)"><i class="fas fa-user-graduate"></i> Learners</div>
+            <div id="staffLink" class="nav-item" onclick="showView('staff', this)"><i class="fas fa-user-shield"></i> Staff Portal</div>
+
+            <div class="nav-label">Operations</div>
+            <div class="nav-item" onclick="showView('leave', this)"><i class="fas fa-walking"></i> Attendance & Leave</div>
+            <div class="nav-item" onclick="showView('discipline', this)"><i class="fas fa-gavel"></i> Discipline</div>
+            <div class="nav-item" onclick="showView('maintenance', this)"><i class="fas fa-tools"></i> Maintenance</div>
+
+            <div class="nav-label">Administration</div>
+            <div id="financialsLink" class="nav-item" onclick="showView('financials', this)"><i class="fas fa-file-invoice-dollar"></i> Financials</div>
+            <div class="nav-item" onclick="showView('reports', this)"><i class="fas fa-chart-line"></i> Reports</div>
+        </nav>
+
+        <div class="user-footer">
+            <div id="userName" style="font-weight: 600; font-size: 14px;">User</div>
+            <div id="userRole" style="font-size: 12px; color: #38bdf8;">Administrator</div>
+            <button onclick="logout()" class="btn-logout">Logout</button>
+        </div>
+    </aside>
+
+    <div class="main-wrapper">
+        <header class="top-nav">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="Global Search (AdNo or Name)..." onkeyup="globalSearch(this.value)">
+            </div>
+            <div id="liveClock" style="font-weight: 500; color: #64748b;"></div>
+        </header>
+
+        <main class="content-body">
+            <h2 id="viewTitle" style="margin-bottom:20px; font-weight: 700;">DASHBOARD</h2>
+
+            <div id="view-overview" class="view-section">
+                <div class="stats-container">
+                    <div class="stat-card card-blue">
+                        <div class="stat-title">Total Capacity</div>
+                        <div class="stat-value" id="statCap">0</div>
+                    </div>
+                    <div class="stat-card card-green">
+                        <div class="stat-title">Available Beds</div>
+                        <div class="stat-value" id="statAvail">0</div>
+                    </div>
+                    <div class="stat-card card-red">
+                        <div class="stat-title">Pending Repairs</div>
+                        <div class="stat-value" id="openIssuesCount">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-title">Total Collected (YTD)</div>
+                        <div class="stat-value" id="statTotalCollected" style="font-size: 1.2rem;">N$ 0.00</div>
+                    </div>
+                </div>
+
+                <div class="grid-2" style="margin-top:25px">
+                    <div class="fancy-card">
+                        <h3>Quick Actions</h3>
+                        <div class="action-grid">
+                            <button class="btn-submit" onclick="showView('learners', null)">+ New Learner</button>
+                            <button class="btn-submit" style="background:#f59e0b" onclick="openMaintenanceModal()">Report Maintenance</button>
+                            <button class="btn-submit" style="background:#0ea5e9" onclick="openPaymentModal()">Post Payment</button>
+                        </div>
+                    </div>
+                    <div class="fancy-card">
+                        <h3>System Connection</h3>
+                        <p><i class="fas fa-database"></i> Database: <b>HostelDb.accdb</b></p>
+                        <p><i class="fas fa-check-circle" style="color:green"></i> Status: <b>Online</b></p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-rooms" class="view-section" style="display:none">
+                <div id="roomGridContainer" class="visual-grid">
+                </div>
+            </div>
+
+            <div id="view-learners" class="view-section" style="display:none">
+                <div class="flex-between" style="margin-bottom: 20px;">
+                    <h3>Student Directory</h3>
+                    <button class="btn-submit" onclick="openRegModal()">Register New Learner</button>
+                </div>
+                <div class="fancy-card">
+                    <table style="width:100%;">
+                        <thead>
+                            <tr><th>AdNo</th><th>Name</th><th>Grade</th><th>Room</th><th>Actions</th></tr>
+                        </thead>
+                        <tbody id="learnerTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="view-maintenance" class="view-section" style="display:none">
+                <div class="flex-between" style="margin-bottom: 20px;">
+                    <h3>Hostel Maintenance Log</h3>
+                    <button class="btn-submit" style="background:#f59e0b" onclick="openMaintenanceModal()">
+                        <i class="fas fa-tools"></i> Report New Issue
+                    </button>
+                </div>
+                <div class="fancy-card">
+                    <table style="width:100%">
+                        <thead>
+                            <tr><th>Room</th><th>Description</th><th>Priority</th><th>Status</th><th>Date</th><th>Action</th></tr>
+                        </thead>
+                        <tbody id="maintenanceTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="view-financials" class="view-section" style="display:none">
+                <div class="stats-container" style="margin-bottom: 25px;">
+                    <div class="stat-card">
+                        <div class="stat-title">MoE Fund (Q-Book)</div>
+                        <div class="stat-value" id="moeFundTotal">N$ 0.00</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-title">HDF Fund (Local)</div>
+                        <div class="stat-value" id="hdfFundTotal">N$ 0.00</div>
+                    </div>
+                </div>
+                <div class="fancy-card">
+                    <div class="flex-between">
+                        <h3>Payment Ledger</h3>
+                        <button class="btn-submit" onclick="openPaymentModal()">+ Record Payment</button>
+                    </div>
+                    <table style="width:100%; margin-top:20px;">
+                        <thead>
+                            <tr><th>Date</th><th>Learner</th><th>MoE</th><th>HDF</th><th>Total</th><th>Receipts</th></tr>
+                        </thead>
+                        <tbody id="paymentListBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <div id="maintenanceModal" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <h3>Report Issue</h3>
+            <form id="maintenanceForm">
+                <label>Room</label>
+                <select id="maintRoomSelect"></select>
+                <label>Description</label>
+                <textarea id="maintDesc" required></textarea>
+                <label>Priority</label>
+                <select id="maintPriority">
+                    <option value="Low">Low</option>
+                    <option value="Medium" selected>Medium</option>
+                    <option value="High">High (Urgent)</option>
+                </select>
+                <label>Date</label>
+                <input type="date" id="maintDate">
+                <div style="margin-top:20px;">
+                    <button type="button" class="btn-submit" onclick="submitMaintenanceIssue()">Save</button>
+                    <button type="button" onclick="closeMaintenanceModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="paymentModal" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <h3>Post Payment</h3>
+            <form id="paymentForm">
+                <label>Student</label>
+                <select id="payStudentSelect"></select>
+                <label>Amount (N$)</label>
+                <input type="number" id="payAmount" oninput="calculateSplit()" required>
+                <div class="grid-2" style="background:#f8fafc; padding:10px; margin:10px 0;">
+                    <div>MoE: <span id="moeSplitDisplay">N$ 0.00</span></div>
+                    <div>HDF: <span id="hdfSplitDisplay">N$ 0.00</span></div>
+                </div>
+                <label>MoE Receipt (Q-Book)</label>
+                <input type="text" id="minReceipt">
+                <label>HDF Receipt</label>
+                <input type="text" id="hdfReceipt">
+                <label>Date</label>
+                <input type="date" id="payDate">
+                <div style="margin-top:20px;">
+                    <button type="button" class="btn-submit" onclick="savePayment()">Post</button>
+                    <button type="button" onclick="closePaymentModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/dashboard.js"></script>
+    <script src="js/learners.js"></script>
+    <script src="js/rooms.js"></script>
+    <script src="js/financials.js"></script>
+    <script src="js/maintenance.js"></script>
+
+    <script>
+        window.onload = () => {
+            // Set User Info
+            document.getElementById('userName').innerText = sessionStorage.getItem('userName') || "Admin User";
+            document.getElementById('userRole').innerText = sessionStorage.getItem('userRole') || "Administrator";
+
+            // Check Permissions (Phase 3 logic)
+            if (sessionStorage.getItem('userRole') !== 'Admin') {
+                document.getElementById('financialsLink').style.display = 'none';
+                document.getElementById('staffLink').style.display = 'none';
+            }
+
+            // Initial Loads
+            updateStats();
+            showView('overview', document.querySelector('.nav-item'));
+        };
+    </script>
+</body>
+</html>
