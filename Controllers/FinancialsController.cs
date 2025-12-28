@@ -73,7 +73,9 @@ namespace HostelManagementSystem.Controllers
         [HttpPost("pay")]
         public IActionResult RecordPayment([FromBody] PaymentRequest req)
         {
-            return AddTransactionToExcel(DateTime.Now, "Income", req.VoteId.ToString(), req.Amount, "Learner Payment", req.Reference);
+            // Include Admission Number in Description so it's not anonymous
+            string desc = string.IsNullOrWhiteSpace(req.AdmissionNo) ? "Learner Payment" : $"Payment - {req.AdmissionNo}";
+            return AddTransactionToExcel(DateTime.Now, "Income", req.VoteId.ToString(), req.Amount, desc, req.Reference);
         }
 
         [HttpPost("expense")]
@@ -107,7 +109,51 @@ namespace HostelManagementSystem.Controllers
             catch (Exception ex) { return StatusCode(500, new { Message = ex.Message }); }
         }
 
-        // --- 3. SUMMARY (Aggregate from Excel) ---
+        // --- 3. STUDENT STATEMENTS (Filtered View) ---
+        [HttpGet("statement/{adNo}")]
+        public IActionResult GetLearnerStatement(string adNo)
+        {
+            var transactions = new List<object>();
+            try
+            {
+                EnsureExcelFile();
+                using (OleDbConnection conn = new OleDbConnection(GetExcelConnectionString()))
+                {
+                    conn.Open();
+                    string sql = "SELECT * FROM [Ledger$] WHERE [Description] LIKE ?";
+
+                    using (var cmd = new OleDbCommand(sql, conn))
+                    {
+                        // Filter for payments made by this student
+                        // We look for "Payment - {adNo}" or just matching description if we had a specific column
+                        cmd.Parameters.AddWithValue("?", $"%{adNo}%");
+
+                        using (var reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                string type = reader["Type"]?.ToString();
+                                double amount = 0;
+                                double.TryParse(reader["Amount"]?.ToString(), out amount);
+
+                                transactions.Add(new
+                                {
+                                    date = Convert.ToDateTime(reader["Date"]).ToString("yyyy-MM-dd"),
+                                    type = type,
+                                    description = reader["Description"]?.ToString(),
+                                    amount = amount,
+                                    refNo = reader["RefNo"]?.ToString()
+                                });
+                            }
+                        }
+                    }
+                }
+                return Ok(transactions);
+            }
+            catch (Exception ex) { return StatusCode(500, new { Message = "Error loading statement: " + ex.Message }); }
+        }
+
+        // --- 4. SUMMARY (Aggregate from Excel) ---
         [HttpGet("summary")]
         public IActionResult GetSummary()
         {
