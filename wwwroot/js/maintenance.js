@@ -4,39 +4,59 @@
 
 async function loadMaintenance() {
     const tbody = document.getElementById('maintenanceTableBody');
+    if (!tbody) return;
+
     try {
         const res = await fetch('/api/maintenance/all');
         const data = await res.json();
 
-        document.getElementById('openIssuesCount').innerText = data.filter(i => i.Status === 'Pending').length;
+        // RBAC CHECK
+        const role = sessionStorage.getItem('userRole');
+        const canFix = (role === 'Maintenance' || role === 'Administrator');
 
-        tbody.innerHTML = data.map(item => `
-            <tr>
-                <td><strong>Room ${item.RoomNumber}</strong></td>
-                <td>${item.IssueDescription}</td>
-                <td><span class="priority-${item.Priority.toLowerCase()}">${item.Priority}</span></td>
-                <td>
-                    <select onchange="updateMaintenanceStatus(${item.Id}, this.value)" style="padding:4px; border-radius:4px;">
-                        <option value="Pending" ${item.Status === 'Pending' ? 'selected' : ''}>Pending</option>
-                        <option value="Fixed" ${item.Status === 'Fixed' ? 'selected' : ''}>Fixed</option>
-                    </select>
-                </td>
-                <td>${new Date(item.ReportedDate).toLocaleDateString()}</td>
-                <td>
-                    <button class="btn-icon" onclick="deleteIssue(${item.Id})"><i class="fas fa-trash"></i></button>
-                </td>
-            </tr>
-        `).join('');
-    } catch (err) { console.error("Maintenance load error", err); }
+        tbody.innerHTML = data.map(m => {
+            let actionBtn = '';
+            if (m.status === 'Pending' && canFix) {
+                actionBtn = `<button onclick="markFixed(${m.id})" class="btn-sm" style="background:#22c55e; color:white; border:none; border-radius:4px; padding:4px 8px;">Mark Done</button>`;
+            } else if (m.status === 'Fixed') {
+                actionBtn = `<span style="color:#22c55e;"><i class="fas fa-check"></i> Fixed</span>`;
+            } else {
+                actionBtn = `<span style="color:#94a3b8;">Pending</span>`; // Other roles just see text
+            }
+
+            return `<tr>
+                <td>${m.room}</td>
+                <td>${m.description}</td>
+                <td>${m.priority}</td>
+                <td>${m.status}</td>
+                <td>${m.date}</td>
+                <td>${actionBtn}</td>
+            </tr>`;
+        }).join('');
+    } catch (err) { console.error(err); }
+}
+
+async function markFixed(id) {
+    if (!confirm("Mark this issue as fixed?")) return;
+    await fetch(`/api/maintenance/resolve/${id}`, { method: 'POST' });
+    loadMaintenance();
 }
 
 async function updateMaintenanceStatus(id, newStatus) {
-    await fetch(`/api/maintenance/update-status/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newStatus)
-    });
-    loadMaintenance(); // Refresh UI
+    try {
+        const res = await fetch(`/api/maintenance/update-status/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newStatus)
+        });
+        if (res.ok) {
+            loadMaintenance(); // Refresh UI
+        } else {
+            alert("Failed to update status.");
+        }
+    } catch (err) {
+        console.error("Update status error:", err);
+    }
 }
 
 // Open Modal and Populate Rooms
@@ -51,7 +71,7 @@ async function openMaintenanceModal() {
         const res = await fetch('/api/Room/all');
         const rooms = await res.json();
         select.innerHTML = '<option value="">-- Choose Room --</option>' +
-            rooms.map(r => `<option value="${r.id}">Room ${r.roomNumber}</option>`).join('');
+            rooms.map(r => `<option value="${r.id}">Room ${r.number}</option>`).join('');
     } catch (err) { console.error("Could not load rooms", err); }
 }
 
@@ -88,4 +108,13 @@ async function submitMaintenanceIssue() {
 function closeMaintenanceModal() {
     document.getElementById('maintenanceModal').style.display = 'none';
     document.getElementById('maintenanceForm').reset();
+}
+async function deleteIssue(id) {
+    if (!confirm("Remove this issue from the log?")) return;
+    try {
+        const res = await fetch(`/api/maintenance/delete/${id}`, { method: 'DELETE' });
+        if (res.ok) loadMaintenance();
+    } catch (err) {
+        console.error("Delete maintenance failed:", err);
+    }
 }

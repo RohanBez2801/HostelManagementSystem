@@ -6,12 +6,63 @@
     <title>Hostel Intelligence | Professional Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* Styles for the new Registration Form Grid Layout */
+        .grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .section-title {
+            color: #2563eb;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 5px;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+
+        .form-section {
+            margin-bottom: 25px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        /* Responsive tweaks for the grid */
+        @media (max-width: 768px) {
+            .grid-3, .grid-2 {
+                grid-template-columns: 1fr;
+            }
+
+            .modal-content {
+                height: 100vh;
+                max-height: 100vh;
+                border-radius: 0;
+            }
+        }
+    </style>
 </head>
 <body>
 
     <aside class="sidebar">
-        <div class="logo-area">HostelPro <small style="display:block; font-size:10px; opacity:0.6;">Intelligence System</small></div>
-        <nav class="nav-links">
+        <div class="logo-area" style="padding: 20px; font-weight: bold; font-size: 20px; color: white;">
+            HOSTELPRO <small style="display:block; font-size: 10px; opacity: 0.7;">INTELLIGENCE</small>
+        </div>
+        <nav class="nav-links" style="margin-top: 10px;">
             <div class="nav-label">Core</div>
             <div class="nav-item active" onclick="showView('overview', this)"><i class="fas fa-th-large"></i> Dashboard</div>
             <div class="nav-item" onclick="showView('rooms', this)"><i class="fas fa-door-open"></i> Room Mapping</div>
@@ -25,29 +76,41 @@
             <div class="nav-item" onclick="showView('discipline', this)"><i class="fas fa-gavel"></i> Discipline</div>
             <div class="nav-item" onclick="showView('maintenance', this)"><i class="fas fa-tools"></i> Maintenance</div>
 
-            <div class="nav-label">Administration</div>
+            <div class="nav-label" id="lbl-admin">Administration</div>
             <div id="financialsLink" class="nav-item" onclick="showView('financials', this)"><i class="fas fa-file-invoice-dollar"></i> Financials</div>
-            <div class="nav-item" onclick="showView('reports', this)"><i class="fas fa-chart-line"></i> Reports</div>
+            <div id="reportsLink" class="nav-item" onclick="showView('reports', this)"><i class="fas fa-chart-line"></i> Reports</div>
+            <div id="settingsLink" class="nav-item" onclick="showView('settings', this)"><i class="fas fa-cog"></i> Settings</div>
         </nav>
 
         <div class="user-footer">
-            <div id="userName" style="font-weight: 600; font-size: 14px;">User</div>
-            <div id="userRole" style="font-size: 12px; color: #38bdf8;">Administrator</div>
+            <div id="userName" style="font-weight: 700; font-size: 15px; color: white;">User</div>
+            <div id="userRole" style="font-size: 12px; color: #94a3b8; margin-bottom: 12px;">Administrator</div>
             <button onclick="logout()" class="btn-logout">Logout</button>
         </div>
     </aside>
 
     <div class="main-wrapper">
         <header class="top-nav">
+            <div class="top-nav-left">
+                <div class="hostel-branding" style="display: flex; align-items: center; cursor: pointer;" onclick="showView('overview', null)">
+                    <div id="hostelLogoPlaceholder" style="width:32px; height:32px; background:var(--primary); border-radius:8px; margin-right:12px;"></div>
+                    <img id="hostelLogoImg" src="" style="height:32px; margin-right:12px; display:none; border-radius:4px;">
+                    <span id="hostelNameDisplay" style="font-weight: 800; font-size: 18px; letter-spacing: -0.025em; color: var(--text-main);">HostelPro</span>
+                </div>
+            </div>
+
             <div class="search-box">
                 <i class="fas fa-search"></i>
                 <input type="text" placeholder="Global Search (AdNo or Name)..." onkeyup="globalSearch(this.value)">
             </div>
-            <div id="liveClock" style="font-weight: 500; color: #64748b;"></div>
+
+            <div class="top-nav-right" style="display: flex; align-items: center;">
+                <div id="liveClock" style="font-weight: 500; color: #64748b; margin-right: 24px;"></div>
+            </div>
         </header>
 
         <main class="content-body">
-            <h2 id="viewTitle" style="margin-bottom:20px; font-weight: 700;">DASHBOARD</h2>
+            <h2 id="viewTitle" style="margin-bottom:24px; font-weight: 800; font-size: 24px; letter-spacing: -0.025em; color: var(--text-main);">DASHBOARD</h2>
 
             <div id="view-overview" class="view-section">
                 <div class="stats-container">
@@ -65,61 +128,168 @@
                     </div>
                     <div class="stat-card">
                         <div class="stat-title">Total Collected (YTD)</div>
-                        <div class="stat-value" id="statTotalCollected" style="font-size: 1.2rem;">N$ 0.00</div>
+                        <div class="stat-value" id="statTotalCollected">N$ 0.00</div>
                     </div>
                 </div>
 
-                <div class="grid-2" style="margin-top:25px">
+                <div class="grid-3">
                     <div class="fancy-card">
                         <h3>Quick Actions</h3>
-                        <div class="action-grid">
-                            <button class="btn-submit" onclick="showView('learners', null)">+ New Learner</button>
-                            <button class="btn-submit" style="background:#f59e0b" onclick="openMaintenanceModal()">Report Maintenance</button>
-                            <button class="btn-submit" style="background:#0ea5e9" onclick="openPaymentModal()">Post Payment</button>
+                        <div class="action-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px;">
+                            <button id="btn-quick-learner" class="btn-submit" onclick="showView('learners', null)">
+                                <i class="fas fa-plus"></i> New Learner
+                            </button>
+                            <button class="btn-submit" style="background:var(--warning)" onclick="openMaintenanceModal()">
+                                <i class="fas fa-tools"></i> Maintenance
+                            </button>
+                            <button id="action-payment" class="btn-submit" style="background:var(--info)" onclick="openPaymentModal()">
+                                <i class="fas fa-wallet"></i> Post Payment
+                            </button>
                         </div>
                     </div>
+
+                    <div class="fancy-card" style="display:flex; flex-direction:column;">
+                        <div class="flex-between" style="margin-bottom:10px;">
+                            <h3 style="margin:0;"><i class="fas fa-bullhorn" style="color:var(--primary)"></i> Notices</h3>
+                            <select id="noticePriority" style="padding:4px; font-size:12px; border:1px solid #ddd; border-radius:4px;">
+                                <option value="Normal">Normal</option>
+                                <option value="High">Urgent</option>
+                            </select>
+                        </div>
+
+                        <div style="display:flex; gap:5px; margin-bottom:15px;">
+                            <input type="text" id="noticeInput" placeholder="Post an announcement..." style="flex:1; padding:8px; border:1px solid #ddd; border-radius:4px;">
+                            <button id="btnPostNotice" onclick="postNotice()" style="padding:8px 15px; background:var(--primary); color:white; border:none; border-radius:4px; cursor:pointer;">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+
+                        <div id="noticeList" style="flex:1; overflow-y:auto; max-height:200px; padding-right:5px;">
+                        </div>
+                    </div>
+
                     <div class="fancy-card">
-                        <h3>System Connection</h3>
-                        <p><i class="fas fa-database"></i> Database: <b>HostelDb.accdb</b></p>
-                        <p><i class="fas fa-check-circle" style="color:green"></i> Status: <b>Online</b></p>
+                        <h3>System Status</h3>
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                            <div class="flex-between">
+                                <span style="color: var(--text-muted); font-size: 14px;"><i class="fas fa-database" style="margin-right: 8px;"></i> Database</span>
+                                <span class="badge" style="background: var(--success-soft); color: var(--success);">HostelDb.accdb</span>
+                            </div>
+                            <div class="flex-between">
+                                <span style="color: var(--text-muted); font-size: 14px;"><i class="fas fa-signal" style="margin-right: 8px;"></i> Connection</span>
+                                <span class="badge" style="background: var(--success-soft); color: var(--success);">Online</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <div id="view-rooms" class="view-section" style="display:none">
-                <div id="roomGridContainer" class="visual-grid">
+                <div class="flex-between" style="margin-bottom: 20px;">
+                    <h3>Hostel Room Mapping</h3>
+                    <button id="btn-add-room" class="btn-submit" onclick="openAddRoomModal()">
+                        <i class="fas fa-plus"></i> Add New Room
+                    </button>
                 </div>
+                <div id="roomGridContainer"></div>
             </div>
 
             <div id="view-learners" class="view-section" style="display:none">
                 <div class="flex-between" style="margin-bottom: 20px;">
                     <h3>Student Directory</h3>
-                    <button class="btn-submit" onclick="openRegModal()">Register New Learner</button>
+                    <button id="btn-reg-learner" class="btn-submit" onclick="openRegModal()">Register New Learner</button>
                 </div>
                 <div class="fancy-card">
-                    <table style="width:100%;">
-                        <thead>
-                            <tr><th>AdNo</th><th>Name</th><th>Grade</th><th>Room</th><th>Actions</th></tr>
-                        </thead>
-                        <tbody id="learnerTableBody"></tbody>
-                    </table>
+                    <div class="table-container">
+                        <table style="width:100%;">
+                            <thead><tr><th>AdNo</th><th>Name</th><th>Gender</th><th>Grade</th><th>Block / Room</th><th>Actions</th></tr></thead>
+                            <tbody id="learnerTableBody"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
             <div id="view-maintenance" class="view-section" style="display:none">
                 <div class="flex-between" style="margin-bottom: 20px;">
                     <h3>Hostel Maintenance Log</h3>
-                    <button class="btn-submit" style="background:#f59e0b" onclick="openMaintenanceModal()">
+                    <button class="btn-submit" style="background:var(--warning)" onclick="openMaintenanceModal()">
                         <i class="fas fa-tools"></i> Report New Issue
                     </button>
                 </div>
                 <div class="fancy-card">
-                    <table style="width:100%">
-                        <thead>
-                            <tr><th>Room</th><th>Description</th><th>Priority</th><th>Status</th><th>Date</th><th>Action</th></tr>
-                        </thead>
-                        <tbody id="maintenanceTableBody"></tbody>
-                    </table>
+                    <div class="table-container">
+                        <table style="width:100%">
+                            <thead><tr><th>Room</th><th>Description</th><th>Priority</th><th>Status</th><th>Date</th><th>Action</th></tr></thead>
+                            <tbody id="maintenanceTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-staff" class="view-section" style="display:none">
+                <div class="flex-between" style="margin-bottom: 20px;">
+                    <h3>Staff Directory</h3>
+                    <button id="btn-add-staff" class="btn-submit" onclick="openStaffModal()">+ Add Staff Member</button>
+                </div>
+                <div class="fancy-card">
+                    <div class="table-container">
+                        <table style="width:100%">
+                            <thead><tr><th>Name</th><th>Title</th><th>Shift</th><th>Phone</th><th>Actions</th></tr></thead>
+                            <tbody id="staffTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-discipline" class="view-section" style="display:none">
+                <div class="flex-between" style="margin-bottom: 20px;">
+                    <h3>Discipline Tracking</h3>
+                    <button class="btn-submit" style="background:var(--danger)" onclick="openDisciplineModal()">Log New Incident</button>
+                </div>
+                <div class="fancy-card">
+                    <p>Select a student to view their disciplinary history.</p>
+                    <select id="discStudentSelect" onchange="loadDisciplineHistory(this.value)" style="padding:10px; width:300px; border-radius:8px; border:1px solid #ddd; margin-bottom:20px;">
+                        <option value="">-- Choose Learner --</option>
+                    </select>
+                    <div class="table-container">
+                        <table style="width:100%">
+                            <thead><tr><th>Date</th><th>Description</th><th>Severity</th><th>Reported By</th></tr></thead>
+                            <tbody id="disciplineTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-reports" class="view-section" style="display:none">
+                <div class="grid-2">
+                    <div class="fancy-card">
+                        <h3>Financial Summary</h3>
+                        <p>Generate a report of all payments collected this year.</p>
+                        <button class="btn-submit" onclick="generateFinancialReport()">Download PDF Report</button>
+                    </div>
+                    <div class="fancy-card">
+                        <h3>Occupancy Report</h3>
+                        <p>Current room utilization across all blocks.</p>
+                        <button class="btn-submit" onclick="generateOccupancyReport()">View Occupancy Stats</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-leave" class="view-section" style="display:none">
+                <div class="flex-between" style="margin-bottom: 20px;">
+                    <h3>Attendance & Leave Tracking</h3>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="date" id="datePicker" onchange="loadAttendance()" style="width: auto;">
+                        <button class="btn-submit" onclick="saveAttendance()">Save Attendance</button>
+                    </div>
+                </div>
+                <div class="fancy-card">
+                    <div class="table-container">
+                        <table style="width:100%">
+                            <thead><tr><th>AdNo</th><th>Name</th><th>Grade</th><th>Room</th><th>Status</th></tr></thead>
+                            <tbody id="attendanceTableBody"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
@@ -136,67 +306,256 @@
                 </div>
                 <div class="fancy-card">
                     <div class="flex-between">
-                        <h3>Payment Ledger</h3>
-                        <button class="btn-submit" onclick="openPaymentModal()">+ Record Payment</button>
+                        <h3>Cash Book Ledger (Income & Expenses)</h3>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn-submit" onclick="openPaymentModal()"><i class="fas fa-plus"></i> Record Income</button>
+                            <button class="btn-submit" style="background: var(--danger);" onclick="openExpenseModal()"><i class="fas fa-minus"></i> Record Expense</button>
+                            <button onclick="openRevenueImport()" style="background:#0284c7; color:white; border:none; padding:8px 15px; border-radius:6px; cursor:pointer; font-weight:600;"><i class="fas fa-file-upload"></i> Import Income CSV</button>
+                        </div>
                     </div>
-                    <table style="width:100%; margin-top:20px;">
-                        <thead>
-                            <tr><th>Date</th><th>Learner</th><th>MoE</th><th>HDF</th><th>Total</th><th>Receipts</th></tr>
-                        </thead>
-                        <tbody id="paymentListBody"></tbody>
-                    </table>
+                    <div class="table-container">
+                        <table style="width:100%; margin-top:20px;">
+                            <thead><tr><th>Date</th><th>Description</th><th>Vote / Type</th><th>Amount</th><th>Ref</th><th>Action</th></tr></thead>
+                            <tbody id="paymentListBody"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
+            <div id="view-settings" class="view-section" style="display:none">
+                <div class="flex-between" style="margin-bottom: 20px;">
+                    <h3>System Configuration</h3>
+                    <button class="btn-submit" onclick="saveSettings()"><i class="fas fa-save"></i> Save All Changes</button>
+                </div>
+                <div class="grid-2">
+                    <div class="fancy-card">
+                        <h3><i class="fas fa-id-card" style="color:var(--primary)"></i> Branding & Identity</h3>
+                        <p style="color: var(--text-muted); font-size: 0.9em; margin-bottom: 15px;">Customize how the application looks.</p>
+                        <form id="brandingForm">
+                            <label>Hostel Name (Full)</label>
+                            <input type="text" id="setHostelName" placeholder="e.g. Windhoek Technical High School Hostel">
+                            <div class="grid-2" style="margin-bottom:0; gap:15px; margin-top:10px;">
+                                <div><label>Logo Text (Short)</label><input type="text" id="setLogoText" placeholder="e.g. WTHS"></div>
+                                <div><label>Theme Color</label><div style="display:flex; align-items:center; gap:10px;"><div id="colorPreview" style="width:30px; height:30px; background:var(--primary); border-radius:50%;"></div><span style="font-size:12px; color:#666;">(Auto-detected from logo)</span></div></div>
+                            </div>
+                            <label style="margin-top:15px;">Upload Logo</label>
+                            <div style="border: 2px dashed #ddd; padding: 20px; text-align: center; border-radius: 8px; cursor: pointer; background:#f9fafb;" onclick="document.getElementById('logoInput').click()">
+                                <i class="fas fa-cloud-upload-alt" style="font-size: 24px; color: #ccc;"></i>
+                                <p style="margin: 5px 0 0; font-size: 13px; color: #666;">Click to upload logo</p>
+                                <span id="logoFileName" style="display:block; font-size:11px; color:var(--primary); margin-top:5px;"></span>
+                            </div>
+                            <input type="file" id="logoInput" accept="image/*" style="display: none;" onchange="previewLogo(this)">
+                        </form>
+                    </div>
+                    <div class="fancy-card">
+                        <h3><i class="fas fa-address-book" style="color:var(--info)"></i> Contact Details</h3>
+                        <p style="color: var(--text-muted); font-size: 0.9em; margin-bottom: 15px;">Used on Statements & Application Forms.</p>
+                        <form id="contactForm">
+                            <label>Physical Address</label>
+                            <input type="text" id="setAddressPhys" placeholder="e.g. 123 School Street, Windhoek">
+                            <label style="margin-top:10px;">Postal Address</label>
+                            <input type="text" id="setAddressPost" placeholder="e.g. Private Bag 12014, Ausspannplatz">
+                            <div class="grid-2" style="margin-bottom:0; gap:15px; margin-top:10px;">
+                                <div><label>Telephone</label><input type="text" id="setPhone" placeholder="061 242 451"></div>
+                                <div><label>Email Address</label><input type="text" id="setEmail" placeholder="hostel@school.na"></div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="fancy-card">
+                        <h3><i class="fas fa-coins" style="color:var(--warning)"></i> Financial Configuration</h3>
+                        <p style="color: var(--text-muted); font-size: 0.9em; margin-bottom: 15px;">Fee structures and banking details.</p>
+                        <div class="grid-2" style="margin-bottom:0; gap:15px;">
+                            <div><label>Currency Symbol</label><input type="text" id="setCurrency" value="N$" style="text-align:center;"></div>
+                            <div><label>Total Annual Fee</label><input type="number" id="setFullFee" value="2119" onchange="calculateSettingsSplit()"></div>
+                        </div>
+                        <div id="settingsFeeSplit" style="background:#f0f9ff; color:#0369a1; padding:8px; border-radius:6px; font-size:12px; text-align:center; margin-top:10px; font-weight:bold;">
+                            MoE: N$ 619.00 | HDF: N$ 1500.00
+                        </div>
+                        <hr style="border:0; border-top:1px solid #eee; margin:15px 0;">
+                        <label><strong>Bank Account Details</strong> (For Invoices)</label>
+                        <input type="text" id="setBankName" placeholder="Bank Name (e.g. Bank Windhoek)" style="margin-bottom:8px;">
+                        <input type="text" id="setAccName" placeholder="Account Name (e.g. WTHS Hostel)" style="margin-bottom:8px;">
+                        <div class="grid-2" style="margin-bottom:0; gap:15px;">
+                            <input type="text" id="setAccNo" placeholder="Account Number">
+                            <input type="text" id="setBranch" placeholder="Branch Code">
+                        </div>
+                    </div>
+                    <div class="fancy-card" style="border-left: 4px solid var(--primary);">
+                        <h3><i class="fas fa-cogs" style="color:#64748b"></i> System Maintenance</h3>
+                        <p style="color: var(--text-muted); font-size: 0.9em; margin-bottom: 15px;">Advanced database actions.</p>
+                        <div style="background:#fff7ed; border:1px solid #ffedd5; padding:15px; border-radius:8px; margin-bottom:15px;">
+                            <strong style="color:#c2410c; font-size:13px;">Database Schema Update</strong>
+                            <p style="font-size:12px; color:#9a3412; margin:5px 0;">Use this if you recently added new features (like Gender/Parents) and the database needs new columns.</p>
+                            <button type="button" class="btn-sm" onclick="runMigration()" style="width:100%; text-align:center; margin-top:5px; background:white; border:1px solid #c2410c; color:#c2410c;">
+                                <i class="fas fa-database"></i> Run Database Migration
+                            </button>
+                        </div>
+                        <div style="background:#f1f5f9; border:1px solid #e2e8f0; padding:15px; border-radius:8px;">
+                            <strong style="font-size:13px;">Local Data</strong>
+                            <p style="font-size:12px; color:#64748b; margin:5px 0;">Clear cached settings (logos, fees) from this browser.</p>
+                            <button type="button" class="btn-sm" onclick="if(confirm('Reset all local settings?')) { localStorage.removeItem('hostelSettings'); location.reload(); }" style="width:100%; text-align:center; margin-top:5px;">
+                                <i class="fas fa-trash-alt"></i> Reset Local Settings
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 
-    <div id="maintenanceModal" class="modal-overlay" style="display:none;">
-        <div class="modal-content">
-            <h3>Report Issue</h3>
-            <form id="maintenanceForm">
-                <label>Room</label>
-                <select id="maintRoomSelect"></select>
-                <label>Description</label>
-                <textarea id="maintDesc" required></textarea>
-                <label>Priority</label>
-                <select id="maintPriority">
-                    <option value="Low">Low</option>
-                    <option value="Medium" selected>Medium</option>
-                    <option value="High">High (Urgent)</option>
-                </select>
-                <label>Date</label>
-                <input type="date" id="maintDate">
-                <div style="margin-top:20px;">
-                    <button type="button" class="btn-submit" onclick="submitMaintenanceIssue()">Save</button>
-                    <button type="button" onclick="closeMaintenanceModal()">Cancel</button>
+    <div id="regModal" class="modal-overlay" style="display:none; align-items:flex-start; padding-top:20px;">
+        <div class="modal-content paper-form">
+            <div class="form-header">
+                <div class="header-left" style="display:flex; justify-content:center; align-items:center;">
+                    <div id="formLogoPlaceholder" style="width:80px; height:80px; background:#0e5a32; border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; font-size:18px;">LOGO</div>
+                    <img id="formLogoImg" src="" style="width:80px; height:80px; object-fit:contain; display:none;">
                 </div>
+                <div class="header-center">
+                    <h2>WINDHOEK TECHNICAL HIGH SCHOOL HOSTEL</h2>
+                    <p>Private Bag 12014, Ausspannplatz | Tel: 242451</p>
+                    <h1 style="margin-top:10px; text-decoration:underline;">APPLICATION FOR HOSTEL ACCOMMODATION 2026</h1>
+                </div>
+                <div class="header-right"><div class="receipt-box"><label>RECEIPT NO:</label><div class="dashed-line"></div></div></div>
+            </div>
+            <form id="learnerForm" onsubmit="event.preventDefault(); saveLearner();">
+                <input type="hidden" id="editLearnerId">
+                <div class="form-row border-bottom">
+                    <div class="field-group"><label>CLOSING DATE:</label> <strong>18 OCTOBER 2025</strong></div>
+                    <div class="field-group"><label>CURRENT GRADE:</label><input type="number" id="lnGrade" style="width:50px;"></div>
+                    <div class="field-group checkbox-group"><label>GENDER:</label><select id="lnGender" onchange="loadRoomsForGender()" required><option value="">-- Select --</option><option value="Male">Boy</option><option value="Female">Girl</option></select></div>
+                    <div class="field-group"><label>ALLOCATED ROOM:</label><select id="regRoomSelect" required style="width:150px;"><option value="">Select Gender First</option></select></div>
+                </div>
+                <div class="section-header">LEARNER'S PERSONAL INFORMATION</div>
+                <div class="form-body">
+                    <div class="col-main">
+                        <div class="form-row"><label>SURNAME:</label><input type="text" id="lnSurname" class="line-input" required></div>
+                        <div class="form-row"><label>CHRISTIAN NAMES:</label><input type="text" id="lnNames" class="line-input" required></div>
+                        <div class="form-row"><label>PREFERRED NAME:</label><input type="text" id="lnPref" class="line-input"></div>
+                        <div class="form-row split-3">
+                            <div><label>HOME LANGUAGE:</label><input type="text" id="lnLang" class="line-input"></div>
+                            <div><label>DATE OF BIRTH:</label><input type="date" id="lnDOB" class="line-input" required></div>
+                            <div><label>CITIZENSHIP:</label><input type="text" id="lnCitizen" class="line-input" value="Namibian"></div>
+                        </div>
+                        <div class="form-row split-2"><div><label>PLACE OF BIRTH:</label><input type="text" id="lnPOB" class="line-input"></div><div><label>STUDY PERMIT NO:</label><input type="text" id="lnPermit" class="line-input"></div></div>
+                        <div class="form-row split-2"><div><label>CHURCH RELATION:</label><input type="text" id="lnReligion" class="line-input"></div><div><label>LEARNER'S CELL NO:</label><input type="text" id="lnCell" class="line-input"></div></div>
+                        <div class="form-row"><label>RESIDENTIAL ADDRESS:</label><input type="text" id="lnAddress" class="line-input"></div>
+                    </div>
+                    <div class="col-side"><div class="photo-box">ATTACH RECENT<br>PASSPORT PHOTO<br>HERE</div></div>
+                </div>
+                <div class="form-row split-3 border-top padding-top">
+                    <div><label>PRESENT SCHOOL:</label><input type="text" id="lnPrevSchool" class="line-input"></div>
+                    <div><label>PRESENT HOSTEL:</label><input type="text" id="lnPrevHostel" class="line-input"></div>
+                    <div><label>GRADES REPEATED:</label><input type="text" id="lnRepeated" class="line-input"></div>
+                </div>
+                <div class="form-row split-2"><div><label>REFERENCE TEACHER:</label><input type="text" id="lnRef" class="line-input"></div><div><label>TEACHER'S CELL:</label><input type="text" id="lnRefCell" class="line-input"></div></div>
+                <div class="section-header">PARENT'S INFORMATION</div>
+                <div class="parent-grid">
+                    <div class="parent-col">
+                        <h3>FATHER / GUARDIAN</h3>
+                        <div class="form-row"><label>SURNAME:</label><input type="text" id="pFatherName" class="line-input" placeholder="(Include Initials)"></div>
+                        <div class="form-row"><label>ID NO:</label><input type="text" id="pFatherID" class="line-input"></div>
+                        <div class="form-row"><label>EMPLOYER:</label><input type="text" id="pFatherEmp" class="line-input"></div>
+                        <div class="form-row"><label>TEL (WORK):</label><input type="text" id="pFatherPhone" class="line-input"></div>
+                        <div class="form-row"><label>EMAIL:</label><input type="text" id="pFatherEmail" class="line-input"></div>
+                    </div>
+                    <div class="parent-col border-left">
+                        <h3>MOTHER / GUARDIAN</h3>
+                        <div class="form-row"><label>SURNAME:</label><input type="text" id="pMotherName" class="line-input" placeholder="(Include Initials)"></div>
+                        <div class="form-row"><label>ID NO:</label><input type="text" id="pMotherID" class="line-input"></div>
+                        <div class="form-row"><label>EMPLOYER:</label><input type="text" id="pMotherEmp" class="line-input"></div>
+                        <div class="form-row"><label>TEL (WORK):</label><input type="text" id="pMotherPhone" class="line-input"></div>
+                        <div class="form-row"><label>EMAIL:</label><input type="text" id="pMotherEmail" class="line-input"></div>
+                    </div>
+                </div>
+                <div class="section-header">LEARNER'S MEDICAL INFORMATION</div>
+                <div class="form-row split-3">
+                    <div><label>MEDICAL AID:</label><input type="text" id="medAidName" class="line-input"></div>
+                    <div><label>NUMBER:</label><input type="text" id="medAidNo" class="line-input"></div>
+                    <div><label>DOCTOR:</label><input type="text" id="medDoctor" class="line-input"></div>
+                </div>
+                <div class="form-row"><label>MEDICAL HISTORY (Allergies, Epilepsy, Asthma, etc):</label><textarea id="medHistory" class="line-input" rows="2"></textarea></div>
+                <div class="form-row"><label>RELATIVES PERMITTED TO SIGN OUT (Name & Tel):</label><textarea id="medRelatives" class="line-input" rows="2"></textarea></div>
+                <div class="form-actions"><button type="button" onclick="closeModal('regModal')" class="btn-cancel">Cancel</button><button type="submit" class="btn-save">SUBMIT APPLICATION</button></div>
             </form>
         </div>
     </div>
 
     <div id="paymentModal" class="modal-overlay" style="display:none;">
         <div class="modal-content">
-            <h3>Post Payment</h3>
+            <h3>Post Payment (Income)</h3>
             <form id="paymentForm">
-                <label>Student</label>
-                <select id="payStudentSelect"></select>
-                <label>Amount (N$)</label>
-                <input type="number" id="payAmount" oninput="calculateSplit()" required>
-                <div class="grid-2" style="background:#f8fafc; padding:10px; margin:10px 0;">
-                    <div>MoE: <span id="moeSplitDisplay">N$ 0.00</span></div>
-                    <div>HDF: <span id="hdfSplitDisplay">N$ 0.00</span></div>
+                <label>Student</label><select id="payStudentSelect" required></select>
+                <label id="payAmountLabel">Amount (N$)</label><input type="number" id="payAmount" step="0.01" required>
+                <label>Reference / Receipt No.</label><input type="text" id="payRef" placeholder="e.g. REC-001">
+                <label>Date</label><input type="date" id="payDate">
+                <div style="margin-top:20px;"><button type="button" class="btn-submit" onclick="savePayment()">Post Income</button><button type="button" onclick="closePaymentModal()">Cancel</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div id="expenseModal" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <h3 style="color: var(--danger);">Record Expenditure</h3>
+            <form id="expenseForm">
+                <label>Payee / Supplier</label><input type="text" id="expPayee" placeholder="e.g. Telecom, Shoprite" required>
+                <div class="grid-2" style="margin-bottom:0; gap:10px; margin-top:10px;">
+                    <div><label>Amount (N$)</label><input type="number" id="expAmount" step="0.01" placeholder="0.00" required></div>
+                    <div><label>Vote Category</label><select id="expVote" required><option value="">Loading...</option></select></div>
                 </div>
-                <label>MoE Receipt (Q-Book)</label>
-                <input type="text" id="minReceipt">
-                <label>HDF Receipt</label>
-                <input type="text" id="hdfReceipt">
-                <label>Date</label>
-                <input type="date" id="payDate">
-                <div style="margin-top:20px;">
-                    <button type="button" class="btn-submit" onclick="savePayment()">Post</button>
-                    <button type="button" onclick="closePaymentModal()">Cancel</button>
-                </div>
+                <label style="margin-top:10px;">Reference / Invoice No.</label><input type="text" id="expRef" placeholder="e.g. INV-001">
+                <div style="margin-top:20px;"><button type="button" class="btn-submit" style="background:var(--danger)" onclick="submitExpense()">Save Expenditure</button><button type="button" onclick="document.getElementById('expenseModal').style.display='none'">Cancel</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div id="maintenanceModal" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <h3>Report Issue</h3>
+            <form id="maintenanceForm">
+                <label>Room</label><select id="maintRoomSelect"></select>
+                <label>Description</label><textarea id="maintDesc" required></textarea>
+                <label>Priority</label><select id="maintPriority"><option value="Low">Low</option><option value="Medium" selected>Medium</option><option value="High">High (Urgent)</option></select>
+                <label>Date</label><input type="date" id="maintDate">
+                <div style="margin-top:20px;"><button type="button" class="btn-submit" onclick="submitMaintenanceIssue()">Save</button><button type="button" onclick="closeMaintenanceModal()">Cancel</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div id="addRoomModal" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <h3>Add New Hostel Room</h3>
+            <form id="addRoomForm">
+                <label>Room Number</label><input type="text" id="addRoomNumber" placeholder="e.g. 101" required>
+                <label>Block Name</label><input type="text" id="addBlockName" placeholder="e.g. A Block" required>
+                <label>Capacity (Beds)</label><input type="number" id="addCapacity" value="4" required>
+                <div style="margin-top:20px;"><button type="button" class="btn-submit" onclick="saveNewRoom()">Save Room</button><button type="button" onclick="closeAddRoomModal()">Cancel</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div id="staffModal" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <h3>Add Staff Member</h3>
+            <form id="staffForm">
+                <label>Full Name</label><input type="text" id="staffName" required>
+                <label>ID Number</label><input type="text" id="staffIDNumber" required>
+                <label>Job Title</label><input type="text" id="staffTitle" required>
+                <label>Shift</label><select id="staffShift"><option value="Day">Day</option><option value="Night">Night</option><option value="Weekend">Weekend</option></select>
+                <label>Contact Number</label><input type="text" id="staffPhone" required>
+                <div style="margin-top:20px;"><button type="button" class="btn-submit" onclick="saveStaff()">Save Staff</button><button type="button" onclick="closeStaffModal()">Cancel</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div id="disciplineModal" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <h3>Log Incident</h3>
+            <form id="disciplineForm">
+                <label>Student</label><select id="discEntryStudentSelect" required></select>
+                <label>Incident Description</label><textarea id="discDesc" required></textarea>
+                <label>Severity</label><select id="discSeverity"><option value="Minor">Minor</option><option value="Moderate">Moderate</option><option value="Severe">Severe</option></select>
+                <label>Reported By</label><input type="text" id="discReporter" required>
+                <div style="margin-top:20px;"><button type="button" class="btn-submit" onclick="saveDisciplineIncident()" style="background:#ef4444">Log Incident</button><button type="button" onclick="closeDisciplineModal()">Cancel</button></div>
             </form>
         </div>
     </div>
@@ -206,6 +565,12 @@
     <script src="js/rooms.js"></script>
     <script src="js/financials.js"></script>
     <script src="js/maintenance.js"></script>
+    <script src="js/leave.js"></script>
+    <script src="js/staff.js"></script>
+    <script src="js/discipline.js"></script>
+    <script src="js/reports.js"></script>
+    <script src="js/settings.js"></script>
+    <script src="js/notices.js"></script>
 
     <script>
         window.onload = () => {
@@ -213,14 +578,11 @@
             document.getElementById('userName').innerText = sessionStorage.getItem('userName') || "Admin User";
             document.getElementById('userRole').innerText = sessionStorage.getItem('userRole') || "Administrator";
 
-            // Check Permissions (Phase 3 logic)
-            if (sessionStorage.getItem('userRole') !== 'Admin') {
-                document.getElementById('financialsLink').style.display = 'none';
-                document.getElementById('staffLink').style.display = 'none';
-            }
-
             // Initial Loads
-            updateStats();
+            if (typeof updateStats === 'function') updateStats();
+            // Load Notices
+            if (typeof loadNotices === 'function') loadNotices();
+
             showView('overview', document.querySelector('.nav-item'));
         };
     </script>

@@ -1,6 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Data.OleDb;
 using System.Runtime.Versioning;
+using System.Collections.Generic;
+using System;
+using System.IO;
 
 namespace HostelManagementSystem.Controllers
 {
@@ -9,14 +12,14 @@ namespace HostelManagementSystem.Controllers
     [SupportedOSPlatform("windows")]
     public class DisciplineController : ControllerBase
     {
-        private readonly string _connString = @"Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\Users\rouxn\source\repos\HostelManagementSystem\Data\HostelDb.accdb;";
+        private readonly string _connString = $@"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={Path.Combine(Directory.GetCurrentDirectory(), "Data", "HostelDb.accdb")};";
 
         [HttpPost("log")]
         public IActionResult LogIncident([FromBody] DisciplineModel report)
         {
             using (OleDbConnection conn = new OleDbConnection(_connString))
             {
-                string sql = "INSERT INTO tbl_Discipline (LearnerID, IncidentDate, Description, Severity, ReportedBy) VALUES (?, ?, ?, ?, ?)";
+                string sql = "INSERT INTO [tbl_Discipline] ([LearnerID], [IncidentDate], [Description], [Severity], [ReportedBy]) VALUES (?, ?, ?, ?, ?)";
                 OleDbCommand cmd = new OleDbCommand(sql, conn);
                 cmd.Parameters.AddWithValue("?", report.LearnerId);
                 cmd.Parameters.AddWithValue("?", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
@@ -36,7 +39,15 @@ namespace HostelManagementSystem.Controllers
             var history = new List<object>();
             using (OleDbConnection conn = new OleDbConnection(_connString))
             {
-                string sql = "SELECT * FROM tbl_Discipline WHERE LearnerID = ? ORDER BY IncidentDate DESC";
+                // JOIN added to get Parent Contact Info for the report
+                string sql = @"
+                    SELECT d.IncidentDate, d.Description, d.Severity, d.ReportedBy,
+                           l.FatherEmail, l.MotherEmail, l.FatherPhone 
+                    FROM [tbl_Discipline] d
+                    INNER JOIN [tbl_Learners] l ON d.LearnerID = l.LearnerID
+                    WHERE d.[LearnerID] = ? 
+                    ORDER BY d.[IncidentDate] DESC";
+
                 OleDbCommand cmd = new OleDbCommand(sql, conn);
                 cmd.Parameters.AddWithValue("?", learnerId);
                 conn.Open();
@@ -44,12 +55,17 @@ namespace HostelManagementSystem.Controllers
                 {
                     while (reader.Read())
                     {
+                        string email = reader["FatherEmail"]?.ToString();
+                        if (string.IsNullOrEmpty(email)) email = reader["MotherEmail"]?.ToString();
+
                         history.Add(new
                         {
                             Date = reader["IncidentDate"],
                             Text = reader["Description"],
                             Level = reader["Severity"],
-                            By = reader["ReportedBy"]
+                            By = reader["ReportedBy"],
+                            ParentContact = reader["FatherPhone"]?.ToString(), // Useful for "Call Parent" button
+                            ParentEmail = email
                         });
                     }
                 }
@@ -61,8 +77,8 @@ namespace HostelManagementSystem.Controllers
     public class DisciplineModel
     {
         public int LearnerId { get; set; }
-        public string Description { get; set; }
-        public string Severity { get; set; }
-        public string ReportedBy { get; set; }
+        public string Description { get; set; } = string.Empty;
+        public string Severity { get; set; } = "Minor";
+        public string ReportedBy { get; set; } = string.Empty;
     }
 }

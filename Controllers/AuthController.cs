@@ -6,18 +6,19 @@ namespace HostelManagementSystem.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
     public class AuthController : ControllerBase
     {
         // Use relative pathing to ensure the app works on other machines
         // Use your specific repo path as seen in the error message
-        private readonly string _connectionString = @"Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\Users\rouxn\source\repos\HostelManagementSystem\Data\HostelDb.accdb;";
+        private readonly string _connectionString = $@"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={Path.Combine(Directory.GetCurrentDirectory(), "Data", "HostelDb.accdb")};";
         [HttpPost("login")]
         public IActionResult Login([FromBody] LoginRequest request)
         {
             using (OleDbConnection conn = new OleDbConnection(_connectionString))
             {
                 // 1. Username first (?), Password second (?)
-                string sql = "SELECT UserID, UserRole, FullName FROM tbl_Users WHERE Username = ? AND [Password] = ?";
+                string sql = "SELECT [UserID], [UserRole], [FullName] FROM [tbl_Users] WHERE [Username] = ? AND [Password] = ?";
 
                 using (OleDbCommand cmd = new OleDbCommand(sql, conn))
                 {
@@ -46,7 +47,7 @@ namespace HostelManagementSystem.Controllers
 
     public class LoginRequest
     {
-        public string Username { get; set; }
-        public string Password { get; set; }
+        public string Username { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
     }
 }

@@ -9,7 +9,7 @@ namespace HostelManagementSystem.Controllers
     [SupportedOSPlatform("windows")]
     public class StaffController : ControllerBase
     {
-        private readonly string _connString = @"Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\Users\rouxn\source\repos\HostelManagementSystem\Data\HostelDb.accdb;";
+        private readonly string _connString = $@"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={Path.Combine(Directory.GetCurrentDirectory(), "Data", "HostelDb.accdb")};";
 
         [HttpGet("list")]
         public IActionResult GetAllStaff()
@@ -17,7 +17,7 @@ namespace HostelManagementSystem.Controllers
             var staffList = new List<object>();
             using (OleDbConnection conn = new OleDbConnection(_connString))
             {
-                string sql = "SELECT * FROM tbl_Staff ORDER BY FullName ASC";
+                string sql = "SELECT [StaffID], [FullName], [JobTitle], [Shift], [ContactNo] FROM [tbl_Staff] ORDER BY [FullName] ASC";
                 OleDbCommand cmd = new OleDbCommand(sql, conn);
                 conn.Open();
                 using (var reader = cmd.ExecuteReader())
@@ -43,7 +43,7 @@ namespace HostelManagementSystem.Controllers
         {
             using (OleDbConnection conn = new OleDbConnection(_connString))
             {
-                string sql = "INSERT INTO tbl_Staff (FullName, IDNumber, JobTitle, Shift, ContactNo) VALUES (?, ?, ?, ?, ?)";
+                string sql = "INSERT INTO [tbl_Staff] ([FullName], [IDNumber], [JobTitle], [Shift], [ContactNo]) VALUES (?, ?, ?, ?, ?)";
                 OleDbCommand cmd = new OleDbCommand(sql, conn);
                 cmd.Parameters.AddWithValue("?", staff.FullName);
                 cmd.Parameters.AddWithValue("?", staff.IDNumber);
@@ -55,14 +55,35 @@ namespace HostelManagementSystem.Controllers
             }
             return Ok(new { Message = "Staff member added successfully" });
         }
+
+        [HttpDelete("delete/{id}")]
+        public IActionResult DeleteStaff(int id)
+        {
+            try
+            {
+                using (OleDbConnection conn = new OleDbConnection(_connString))
+                {
+                    string sql = "DELETE FROM [tbl_Staff] WHERE [StaffID] = ?";
+                    OleDbCommand cmd = new OleDbCommand(sql, conn);
+                    cmd.Parameters.AddWithValue("?", id);
+                    conn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
     }
 
     public class StaffModel
     {
-        public string FullName { get; set; }
-        public string IDNumber { get; set; }
-        public string JobTitle { get; set; }
-        public string Shift { get; set; }
-        public string ContactNo { get; set; }
+        public string FullName { get; set; } = string.Empty;
+        public string IDNumber { get; set; } = string.Empty;
+        public string JobTitle { get; set; } = string.Empty;
+        public string Shift { get; set; } = string.Empty;
+        public string ContactNo { get; set; } = string.Empty;
     }
 }
