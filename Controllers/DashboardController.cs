@@ -21,7 +21,6 @@ namespace HostelManagementSystem.Controllers
                 int totalStudents = 0;
                 int totalCapacity = 0;
                 int pendingMaintenance = 0;
-                int visitorsToday = 0;
                 int lowStockItems = 0;
 
                 using (OleDbConnection conn = new OleDbConnection(_connString))
@@ -46,16 +45,7 @@ namespace HostelManagementSystem.Controllers
                             pendingMaintenance = (int)cmd.ExecuteScalar();
                     } catch {}
 
-                    // 4. Visitors Today
-                    try {
-                        using (var cmd = new OleDbCommand("SELECT COUNT(*) FROM tbl_Visitors WHERE VisitDate = ?", conn))
-                        {
-                            cmd.Parameters.AddWithValue("?", DateTime.Now.Date);
-                            visitorsToday = (int)cmd.ExecuteScalar();
-                        }
-                    } catch {} // Table might not exist yet if fresh run
-
-                    // 5. Low Stock (< 5)
+                    // 4. Low Stock (< 5)
                     try {
                         using (var cmd = new OleDbCommand("SELECT COUNT(*) FROM tbl_Inventory WHERE Quantity < 5", conn))
                             lowStockItems = (int)cmd.ExecuteScalar();
@@ -68,7 +58,6 @@ namespace HostelManagementSystem.Controllers
                     TotalCapacity = totalCapacity,
                     OccupancyRate = totalCapacity > 0 ? (int)((double)totalStudents / totalCapacity * 100) : 0,
                     PendingMaintenance = pendingMaintenance,
-                    VisitorsToday = visitorsToday,
                     LowStockItems = lowStockItems
                 });
             }

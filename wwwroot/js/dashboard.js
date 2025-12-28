@@ -127,8 +127,8 @@ function showView(viewId, element) {
         case 'settings':
             if (typeof initSettings === 'function') initSettings();
             break;
-        case 'visitors':
-            if (typeof loadVisitors === 'function') loadVisitors();
+        case 'parents':
+            if (typeof loadParents === 'function') loadParents();
             break;
         case 'inventory':
             if (typeof loadInventory === 'function') loadInventory();
@@ -160,9 +160,6 @@ async function updateStats() {
         if (elIssues) elIssues.innerText = stats.pendingMaintenance;
 
         // 3. New Stats
-        const elVisitors = document.getElementById('statVisitors');
-        if (elVisitors) elVisitors.innerText = stats.visitorsToday;
-
         const elStock = document.getElementById('statLowStock');
         if (elStock) elStock.innerText = stats.lowStockItems;
 
