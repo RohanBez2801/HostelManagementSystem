@@ -133,6 +133,15 @@ function showView(viewId, element) {
         case 'inventory':
             if (typeof loadInventory === 'function') loadInventory();
             break;
+        case 'dining':
+            if (typeof loadDiningLog === 'function') loadDiningLog();
+            break;
+        case 'communication':
+            if (typeof loadCommunicationLog === 'function') loadCommunicationLog();
+            break;
+        case 'events':
+            if (typeof loadEvents === 'function') loadEvents();
+            break;
     }
 }
 
