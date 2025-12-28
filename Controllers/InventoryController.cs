@@ -1,0 +1,131 @@
+using Microsoft.AspNetCore.Mvc;
+using System;
+using System.Collections.Generic;
+using System.Data.OleDb;
+using System.Runtime.Versioning;
+using System.IO;
+
+namespace HostelManagementSystem.Controllers
+{
+    [ApiController]
+    [Route("api/[controller]")]
+    [SupportedOSPlatform("windows")]
+    public class InventoryController : ControllerBase
+    {
+        private readonly string _connString = $@"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={Path.Combine(Directory.GetCurrentDirectory(), "Data", "HostelDb.accdb")};";
+
+        [HttpGet("all")]
+        public IActionResult GetAllInventory()
+        {
+            var items = new List<object>();
+            try
+            {
+                using (OleDbConnection conn = new OleDbConnection(_connString))
+                {
+                    conn.Open();
+                    EnsureInventoryTable(conn);
+                    // Left Join with Rooms to get Room Number if assigned to a room
+                    string sql = @"SELECT i.InventoryID, i.ItemName, i.Category, i.Quantity, i.Condition, r.RoomNumber
+                                   FROM tbl_Inventory i
+                                   LEFT JOIN tbl_Rooms r ON i.RoomID = r.RoomID
+                                   ORDER BY i.ItemName ASC";
+
+                    using (var cmd = new OleDbCommand(sql, conn))
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            items.Add(new
+                            {
+                                Id = reader["InventoryID"],
+                                Name = reader["ItemName"]?.ToString(),
+                                Category = reader["Category"]?.ToString(),
+                                Quantity = reader["Quantity"],
+                                Condition = reader["Condition"]?.ToString(),
+                                Room = reader["RoomNumber"]?.ToString() ?? "General Store"
+                            });
+                        }
+                    }
+                }
+                return Ok(items);
+            }
+            catch (Exception ex) { return StatusCode(500, new { Message = ex.Message }); }
+        }
+
+        [HttpPost("add")]
+        public IActionResult AddInventory([FromBody] InventoryItem item)
+        {
+            try
+            {
+                using (OleDbConnection conn = new OleDbConnection(_connString))
+                {
+                    conn.Open();
+                    EnsureInventoryTable(conn);
+                    string sql = "INSERT INTO tbl_Inventory (ItemName, Category, Quantity, Condition, RoomID) VALUES (?, ?, ?, ?, ?)";
+                    using (var cmd = new OleDbCommand(sql, conn))
+                    {
+                        cmd.Parameters.AddWithValue("?", item.Name);
+                        cmd.Parameters.AddWithValue("?", item.Category ?? "General");
+                        cmd.Parameters.AddWithValue("?", item.Quantity);
+                        cmd.Parameters.AddWithValue("?", item.Condition ?? "Good");
+                        // If RoomID is 0 or null, we treat it as null in DB (General Store)
+                        if (item.RoomId > 0)
+                            cmd.Parameters.AddWithValue("?", item.RoomId);
+                        else
+                            cmd.Parameters.AddWithValue("?", DBNull.Value);
+
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+                return Ok(new { Message = "Inventory item added" });
+            }
+            catch (Exception ex) { return StatusCode(500, new { Message = ex.Message }); }
+        }
+
+        [HttpDelete("delete/{id}")]
+        public IActionResult DeleteInventory(int id)
+        {
+             try
+            {
+                using (OleDbConnection conn = new OleDbConnection(_connString))
+                {
+                    conn.Open();
+                    string sql = "DELETE FROM tbl_Inventory WHERE InventoryID = ?";
+                    using (var cmd = new OleDbCommand(sql, conn))
+                    {
+                        cmd.Parameters.AddWithValue("?", id);
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+                return Ok(new { Message = "Item deleted" });
+            }
+            catch (Exception ex) { return StatusCode(500, new { Message = ex.Message }); }
+        }
+
+        private void EnsureInventoryTable(OleDbConnection conn)
+        {
+            var schema = conn.GetSchema("Tables", new string[] { null, null, "tbl_Inventory", "TABLE" });
+            if (schema.Rows.Count == 0)
+            {
+                string createSql = @"CREATE TABLE tbl_Inventory (
+                    InventoryID AUTOINCREMENT PRIMARY KEY,
+                    ItemName TEXT(100),
+                    Category TEXT(50),
+                    Quantity INT,
+                    Condition TEXT(50),
+                    RoomID INT
+                )";
+                using (var cmd = new OleDbCommand(createSql, conn)) cmd.ExecuteNonQuery();
+            }
+        }
+    }
+
+    public class InventoryItem
+    {
+        public string Name { get; set; }
+        public string Category { get; set; }
+        public int Quantity { get; set; }
+        public string Condition { get; set; }
+        public int RoomId { get; set; }
+    }
+}
