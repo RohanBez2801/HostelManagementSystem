@@ -5,15 +5,15 @@
 async function initSettings() {
     try {
         const response = await fetch('/api/settings');
-        if (response.ok) {
+        // Check content type to avoid parsing HTML as JSON
+        const contentType = response.headers.get("content-type");
+        if (response.ok && contentType && contentType.includes("application/json")) {
             const settings = await response.json();
-            // Store in global or sessionStorage for other modules to access
             sessionStorage.setItem('hostelSettings', JSON.stringify(settings));
-
             applySettings(settings);
             populateForm(settings);
         } else {
-            console.warn("Failed to load settings from server, falling back to defaults.");
+            console.warn("Settings API not available or returned error.");
         }
     } catch (err) {
         console.error("Error loading settings:", err);
@@ -86,14 +86,10 @@ async function previewLogo(input) {
         const reader = new FileReader();
         reader.onload = function (e) {
             const logoData = e.target.result;
-            // Store temporarily in the form dataset
             document.getElementById('brandingForm').dataset.tempLogo = logoData;
-            document.getElementById('brandingForm').dataset.tempLogoName = file.name;
 
-            // Extract color for visual feedback
             updateThemeFromLogo(logoData);
 
-            // Show immediate preview in top nav
             const imgLogo = document.getElementById('hostelLogoImg');
             if (imgLogo) { imgLogo.src = logoData; imgLogo.style.display = 'block'; }
             document.getElementById('hostelLogoPlaceholder').style.display = 'none';
@@ -124,7 +120,7 @@ async function saveSettings() {
         AccName: document.getElementById('setAccName').value,
         AccNo: document.getElementById('setAccNo').value,
         Branch: document.getElementById('setBranch').value,
-        LogoData: logoData // Only send if changed/set
+        LogoData: logoData
     };
 
     try {
@@ -136,7 +132,7 @@ async function saveSettings() {
 
         if (response.ok) {
             alert("Settings saved successfully!");
-            initSettings(); // Reload to refresh UI
+            initSettings();
         } else {
             alert("Failed to save settings.");
         }
@@ -158,20 +154,19 @@ async function activateLicense() {
 
         const result = await response.json();
         if (response.ok) {
-            alert("Success: " + result.message);
+            alert("Success: " + result.Message);
             initSettings();
         } else {
-            alert("Error: " + result.message);
+            alert("Error: " + result.Message);
         }
     } catch (err) {
-        alert("License Activation Failed");
+        alert("License Activation Failed: " + err.message);
     }
 }
 
 function applySettings(settings) {
     if (!settings) return;
 
-    // 1. Update Top Nav Branding
     const displayLogo = document.getElementById('hostelNameDisplay');
     const placeholder = document.getElementById('hostelLogoPlaceholder');
     const imgLogo = document.getElementById('hostelLogoImg');
@@ -187,7 +182,6 @@ function applySettings(settings) {
         updateThemeFromLogo(settings.LogoData);
     }
 
-    // 2. Update Document Title
     if (settings.HostelName) document.title = `${settings.HostelName} | Dashboard`;
 }
 
@@ -201,7 +195,6 @@ function updateThemeFromLogo(base64) {
         canvas.height = img.height;
         ctx.drawImage(img, 0, 0);
 
-        // Simple pixel sampling center-ish
         const p = ctx.getImageData(img.width / 2, img.height / 2, 1, 1).data;
         if (p[3] > 128) {
             const primary = `rgb(${p[0]}, ${p[1]}, ${p[2]})`;
@@ -213,7 +206,6 @@ function updateThemeFromLogo(base64) {
     img.src = base64;
 }
 
-// Add listeners
 document.addEventListener('DOMContentLoaded', () => {
     initSettings();
 });
