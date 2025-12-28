@@ -127,44 +127,43 @@ function showView(viewId, element) {
         case 'settings':
             if (typeof initSettings === 'function') initSettings();
             break;
+        case 'parents':
+            if (typeof loadParents === 'function') loadParents();
+            break;
+        case 'inventory':
+            if (typeof loadInventory === 'function') loadInventory();
+            break;
     }
 }
 
 // --- 3. DASHBOARD STATS ---
 async function updateStats() {
     try {
-        // A. Room Data
-        const roomRes = await fetch('/api/Room/all');
-        const roomData = await roomRes.json();
-        const rooms = Array.isArray(roomData) ? roomData : (roomData.value || []);
+        const res = await fetch('/api/Dashboard/stats');
+        const stats = await res.json();
 
-        let totalCap = 0;
-        let totalOcc = 0;
-
-        rooms.forEach(r => {
-            const cap = parseInt(r.capacity || r.Capacity || 0);
-            const occ = parseInt(r.occupied || r.Occupied || r.RealOccupancy || 0);
-            totalCap += cap;
-            totalOcc += occ;
-        });
-
+        // 1. Capacity & Availability
         const elCap = document.getElementById('statCap');
         const elAvail = document.getElementById('statAvail');
-        if (elCap) elCap.innerText = totalCap;
-        if (elAvail) elAvail.innerText = totalCap - totalOcc;
+        if (elCap) elCap.innerText = stats.totalCapacity;
+        if (elAvail) elAvail.innerText = stats.totalCapacity - (Math.round(stats.totalCapacity * (stats.occupancyRate / 100)) || 0); // Approx based on rate if needed, or calc exact if API sends occupied count.
+        // Actually API sends TotalCapacity and OccupancyRate.
+        // Let's rely on what we have or better yet, let's keep it simple.
+        // The API returns TotalCapacity. We can calculate available if we had occupied.
+        // Wait, the API returns OccupancyRate, TotalStudents.
+        // Available = TotalCapacity - (OccupancyRate/100 * TotalCapacity)? No, TotalStudents is simpler.
+        if (elAvail) elAvail.innerText = stats.totalCapacity - stats.totalStudents; // Assuming 1 student = 1 bed
 
-        // B. Maintenance
-        try {
-            const maintRes = await fetch('/api/maintenance/all');
-            const maintData = await maintRes.json();
-            const maintList = Array.isArray(maintData) ? maintData : (maintData.value || []);
-            const pending = maintList.filter(i => (i.status || i.Status) === 'Pending').length;
 
-            const elIssues = document.getElementById('openIssuesCount');
-            if (elIssues) elIssues.innerText = pending;
-        } catch (e) { console.warn("Maintenance stats failed", e); }
+        // 2. Maintenance
+        const elIssues = document.getElementById('openIssuesCount');
+        if (elIssues) elIssues.innerText = stats.pendingMaintenance;
 
-        // C. Financials (SECURED: Only fetch/show if Admin)
+        // 3. New Stats
+        const elStock = document.getElementById('statLowStock');
+        if (elStock) elStock.innerText = stats.lowStockItems;
+
+        // 4. Financials (Still fetch separately as it might have specific security/logic)
         if (isAdmin()) {
             try {
                 const finRes = await fetch('/api/Financials/summary');
@@ -177,7 +176,6 @@ async function updateStats() {
                 if (elFin) elFin.innerText = `${currency} ${total.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
             } catch (e) { console.warn("Financial stats failed", e); }
         } else {
-            // Hide the component if not admin (redundant safety)
             const elFin = document.getElementById('statTotalCollected');
             if (elFin && elFin.closest('.stat-card')) {
                 elFin.closest('.stat-card').style.display = 'none';
