@@ -71,7 +71,7 @@ namespace HostelManagementSystem.Controllers
 
         // --- 2. RECORD TRANSACTION (Write to Excel) ---
         [HttpPost("pay")]
-        public IActionResult RecordPayment([FromBody] PaymentRequest req)
+        public IActionResult RecordPayment([FromBody] ExcelPaymentRequest req)
         {
             // Include Admission Number in Description so it's not anonymous
             string desc = string.IsNullOrWhiteSpace(req.AdmissionNo) ? "Learner Payment" : $"Payment - {req.AdmissionNo}";
@@ -237,7 +237,7 @@ namespace HostelManagementSystem.Controllers
         }
     }
 
-    public class PaymentRequest { 
+    public class ExcelPaymentRequest {
         public string AdmissionNo { get; set; } 
         public double Amount { get; set; } 
         public int VoteId { get; set; } 
