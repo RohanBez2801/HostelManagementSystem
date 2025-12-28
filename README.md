@@ -1,6 +1,6 @@
 # Hostel Management System (HostelPro)
 
-HostelPro is a comprehensive Hostel Management System designed to streamline the administrative tasks of managing a student hostel. It provides a unified interface for managing learners, staff, rooms, inventory, parents, and financial records.
+HostelPro is a comprehensive Hostel Management System designed to streamline the administrative tasks of managing a student hostel. It provides a unified interface for managing learners, staff, rooms, inventory, parents, financial records, and communications.
 
 ## Features
 
@@ -14,12 +14,20 @@ HostelPro is a comprehensive Hostel Management System designed to streamline the
 *   **Attendance & Leave:** Track daily attendance. Includes a **Roll Call** feature that generates a printable, room-sorted list of students for physical verification.
 *   **Discipline:** Record and track disciplinary incidents.
 *   **Maintenance:** Log and monitor maintenance requests for rooms and facilities.
-*   **Inventory (New):** Track hostel assets, furniture, and supplies. Monitor quantities and conditions.
-*   **Parents (New):** Manage parent/guardian contact information and link multiple learners to a single parent account.
+*   **Inventory:** Track hostel assets, furniture, and supplies. Monitor quantities and conditions.
+*   **Dining & Kitchen:** Log kitchen supplies and meal records.
+*   **Events Calendar:** Schedule and track hostel events (meetings, sports, inspections).
+
+### Communication & People
+*   **Parents:** Manage parent/guardian contact information and link multiple learners to a single parent account.
+*   **Communication Hub:**
+    *   **Email:** Compose and send emails to parents (All, Specific Grade, or Single Parent). Logs all outgoing messages.
+    *   **SMS:** (Phase 2 - Planned) Placeholder for future SMS integration.
 
 ### Administration
-*   **Financials:** Basic financial tracking (fees, expenses).
-*   **User Management:** (Implied via Auth/Staff modules).
+*   **Financials:** Basic financial tracking (fees, expenses, income).
+*   **Settings & Personalization:** Configure hostel details (Name, Logo, Contact Info, Fees) and manage application **License Keys**.
+*   **User Management:** Role-based access control (Admin vs. Staff).
 
 ## Technology Stack
 
@@ -47,7 +55,7 @@ Due to the dependency on the Microsoft Access Database Engine (ACE.OLEDB), this 
 
 2.  **Database Setup:**
     *   The application looks for `Data/HostelDb.accdb`.
-    *   The application uses a "Code First" approach for table creation. On the first run, it will automatically create necessary tables (`tbl_Parents`, `tbl_Inventory`, etc.) if they do not exist.
+    *   The application uses a "Code First" approach for table creation. On the first run, it will automatically create necessary tables (`tbl_Parents`, `tbl_CommunicationLog`, `tbl_Events`, etc.) if they do not exist.
 
 3.  **Run the Application:**
     ```bash
@@ -62,13 +70,15 @@ Due to the dependency on the Microsoft Access Database Engine (ACE.OLEDB), this 
 *   `Controllers/`: ASP.NET Core API Controllers handling business logic and database interactions.
 *   `Data/`: Contains the Microsoft Access database file.
 *   `wwwroot/`: Static files (HTML, CSS, JS) serving the frontend application.
-    *   `js/`: Modular JavaScript files for each feature (e.g., `parents.js`, `rollcall.js`, `dashboard.js`).
+    *   `js/`: Modular JavaScript files for each feature (e.g., `parents.js`, `communication.js`, `dashboard.js`).
 *   `Models/`: (Optional) C# models representing data structures.
 
 ## API Endpoints (Key Modules)
 
 *   `api/dashboard`: Aggregated statistics.
 *   `api/parent`: CRUD operations for parents and child linking.
+*   `api/communication`: Email logging and sending.
+*   `api/settings`: System configuration and license activation.
 *   `api/inventory`: Inventory management.
 *   `api/learner`: Student records.
 *   `api/room`: Room assignments.
