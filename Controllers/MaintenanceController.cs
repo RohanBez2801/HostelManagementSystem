@@ -25,10 +25,11 @@ namespace HostelManagementSystem.Controllers
             {
                 try
                 {
-                    // INNER JOIN ensures we get the human-readable RoomNumber from tbl_Rooms. Bracketing all identifiers.
+                    // FIX: Changed INNER JOIN to LEFT JOIN. 
+                    // This ensures maintenance records appear even if the room was deleted.
                     string sql = @"SELECT m.[MaintenanceID], m.[IssueDescription], m.[Priority], m.[ReportedDate], m.[Status], r.[RoomNumber] 
                                  FROM [tbl_Maintenance] m 
-                                 INNER JOIN [tbl_Rooms] r ON m.[RoomID] = r.[RoomID] 
+                                 LEFT JOIN [tbl_Rooms] r ON m.[RoomID] = r.[RoomID] 
                                  ORDER BY m.[ReportedDate] DESC";
 
                     conn.Open();
@@ -42,7 +43,8 @@ namespace HostelManagementSystem.Controllers
                                 list.Add(new
                                 {
                                     Id = reader["MaintenanceID"],
-                                    RoomNumber = reader["RoomNumber"]?.ToString() ?? "N/A",
+                                    // FIX: Handle null RoomNumber explicitly (e.g. if room was deleted)
+                                    RoomNumber = reader["RoomNumber"] != DBNull.Value ? reader["RoomNumber"].ToString() : "Unknown/Del",
                                     IssueDescription = reader["IssueDescription"]?.ToString() ?? "-",
                                     Priority = reader["Priority"]?.ToString() ?? "Medium",
                                     Status = reader["Status"]?.ToString() ?? "Pending",

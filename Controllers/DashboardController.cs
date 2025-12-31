@@ -50,16 +50,33 @@ namespace HostelManagementSystem.Controllers
                         using (var cmd = new OleDbCommand("SELECT COUNT(*) FROM tbl_Inventory WHERE Quantity < 5", conn))
                             lowStockItems = (int)cmd.ExecuteScalar();
                     } catch {}
-                }
 
-                return Ok(new
-                {
-                    TotalStudents = totalStudents,
-                    TotalCapacity = totalCapacity,
-                    OccupancyRate = totalCapacity > 0 ? (int)((double)totalStudents / totalCapacity * 100) : 0,
-                    PendingMaintenance = pendingMaintenance,
-                    LowStockItems = lowStockItems
-                });
+                    // 5. License Status
+                    string licenseStatus = "Trial";
+                    int daysLeft = 0;
+                    try {
+                        using (var cmd = new OleDbCommand("SELECT LicenseExpiry FROM tbl_Settings", conn))
+                        {
+                            var result = cmd.ExecuteScalar();
+                            if (result != null && result != DBNull.Value) {
+                                DateTime expiry = Convert.ToDateTime(result);
+                                daysLeft = (int)(expiry - DateTime.Now).TotalDays;
+                                licenseStatus = daysLeft > 0 ? "Active" : "Expired";
+                            }
+                        }
+                    } catch { /* Table might not exist yet */ }
+                
+                    return Ok(new
+                    {
+                        TotalStudents = totalStudents,
+                        TotalCapacity = totalCapacity,
+                        OccupancyRate = totalCapacity > 0 ? (int)((double)totalStudents / totalCapacity * 100) : 0,
+                        PendingMaintenance = pendingMaintenance,
+                        LowStockItems = lowStockItems,
+                        LicenseStatus = licenseStatus,
+                        LicenseDaysLeft = daysLeft
+                    });
+                }
             }
             catch (Exception ex) { return StatusCode(500, new { Message = ex.Message }); }
         }

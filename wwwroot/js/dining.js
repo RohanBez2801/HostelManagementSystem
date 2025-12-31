@@ -1,4 +1,4 @@
-﻿async function loadDiningLog() {
+async function loadDiningLog() {
     const tbody = document.getElementById('diningTableBody');
     if (!tbody) return;
 

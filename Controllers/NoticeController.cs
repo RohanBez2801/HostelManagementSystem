@@ -25,7 +25,9 @@ namespace HostelManagementSystem.Controllers
                     conn.Open();
                     EnsureNoticeTable(conn); // Auto-create table
 
-                    string sql = "SELECT * FROM tbl_Notices ORDER BY DatePosted DESC";
+                    // FIX: Added brackets [] to handle reserved keywords safely
+                    string sql = "SELECT * FROM [tbl_Notices] ORDER BY [DatePosted] DESC";
+
                     using (var cmd = new OleDbCommand(sql, conn))
                     using (var reader = cmd.ExecuteReader())
                     {
@@ -56,9 +58,12 @@ namespace HostelManagementSystem.Controllers
                     conn.Open();
                     EnsureNoticeTable(conn);
 
-                    string sql = "INSERT INTO tbl_Notices (Message, Priority, DatePosted) VALUES (?, ?, ?)";
+                    // FIX: "Message" is a reserved word in Access. We must use brackets [Message].
+                    string sql = "INSERT INTO [tbl_Notices] ([Message], [Priority], [DatePosted]) VALUES (?, ?, ?)";
+
                     using (var cmd = new OleDbCommand(sql, conn))
                     {
+                        // Parameters must be added in the exact order of the ? placeholders
                         cmd.Parameters.AddWithValue("?", notice.Message);
                         cmd.Parameters.AddWithValue("?", notice.Priority ?? "Normal");
                         cmd.Parameters.AddWithValue("?", DateTime.Now);
@@ -78,7 +83,8 @@ namespace HostelManagementSystem.Controllers
                 using (OleDbConnection conn = new OleDbConnection(_connString))
                 {
                     conn.Open();
-                    using (var cmd = new OleDbCommand("DELETE FROM tbl_Notices WHERE NoticeID = ?", conn))
+                    // FIX: Added brackets for safety
+                    using (var cmd = new OleDbCommand("DELETE FROM [tbl_Notices] WHERE [NoticeID] = ?", conn))
                     {
                         cmd.Parameters.AddWithValue("?", id);
                         cmd.ExecuteNonQuery();
@@ -94,11 +100,12 @@ namespace HostelManagementSystem.Controllers
             var schema = conn.GetSchema("Tables", new string[] { null, null, "tbl_Notices", "TABLE" });
             if (schema.Rows.Count == 0)
             {
-                string sql = @"CREATE TABLE tbl_Notices (
-                    NoticeID AUTOINCREMENT PRIMARY KEY,
-                    Message MEMO,
-                    Priority TEXT(20),
-                    DatePosted DATETIME
+                // FIX: Added brackets to CREATE statement as well
+                string sql = @"CREATE TABLE [tbl_Notices] (
+                    [NoticeID] AUTOINCREMENT PRIMARY KEY,
+                    [Message] MEMO,
+                    [Priority] TEXT(20),
+                    [DatePosted] DATETIME
                 )";
                 using (var cmd = new OleDbCommand(sql, conn)) cmd.ExecuteNonQuery();
             }

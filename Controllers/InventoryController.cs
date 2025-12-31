@@ -25,11 +25,11 @@ namespace HostelManagementSystem.Controllers
                     conn.Open();
                     EnsureInventoryTable(conn);
                     // Left Join with Rooms to get Room Number if assigned to a room
-                    string sql = @"SELECT i.InventoryID, i.ItemName, i.Category, i.Quantity, i.Condition, r.RoomNumber
-                                   FROM tbl_Inventory i
-                                   LEFT JOIN tbl_Rooms r ON i.RoomID = r.RoomID
+                    string sql = @"SELECT i.InventoryID, i.ItemName, i.Category, i.Quantity, i.Condition, r.RoomNumber 
+                                   FROM tbl_Inventory i 
+                                   LEFT JOIN tbl_Rooms r ON i.RoomID = r.RoomID 
                                    ORDER BY i.ItemName ASC";
-
+                    
                     using (var cmd = new OleDbCommand(sql, conn))
                     using (var reader = cmd.ExecuteReader())
                     {

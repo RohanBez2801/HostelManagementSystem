@@ -16,7 +16,7 @@ function printRollCall() {
             const win = window.open('', '_blank');
             const d = new Date();
             const dateStr = d.toLocaleDateString() + " (Week " + getWeekNumber(d) + ")";
-
+            
             let html = `
             <html>
             <head>
