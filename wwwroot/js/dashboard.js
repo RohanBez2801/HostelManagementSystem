@@ -251,4 +251,12 @@ function logout() {
     }
 }
 
+// Enable keyboard navigation for role="button" elements
+document.addEventListener('keydown', function(e) {
+    if (e.target.getAttribute('role') === 'button' && (e.key === 'Enter' || e.key === ' ')) {
+        e.preventDefault();
+        e.target.click();
+    }
+});
+
 startClock();

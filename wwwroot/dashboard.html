@@ -67,24 +67,24 @@
         </div>
         <nav class="nav-links" style="margin-top: 10px;">
             <div class="nav-label">Core</div>
-            <div class="nav-item active" onclick="showView('overview', this)"><i class="fas fa-th-large"></i> Dashboard</div>
-            <div class="nav-item" onclick="showView('rooms', this)"><i class="fas fa-door-open"></i> Room Mapping</div>
+            <div class="nav-item active" onclick="showView('overview', this)" tabindex="0" role="button"><i class="fas fa-th-large"></i> Dashboard</div>
+            <div class="nav-item" onclick="showView('rooms', this)" tabindex="0" role="button"><i class="fas fa-door-open"></i> Room Mapping</div>
 
             <div class="nav-label">People</div>
-            <div class="nav-item" onclick="showView('learners', this)"><i class="fas fa-user-graduate"></i> Learners</div>
-            <div id="staffLink" class="nav-item" onclick="showView('staff', this)"><i class="fas fa-user-shield"></i> Staff Portal</div>
+            <div class="nav-item" onclick="showView('learners', this)" tabindex="0" role="button"><i class="fas fa-user-graduate"></i> Learners</div>
+            <div id="staffLink" class="nav-item" onclick="showView('staff', this)" tabindex="0" role="button"><i class="fas fa-user-shield"></i> Staff Portal</div>
 
             <div class="nav-label">Operations</div>
-            <div class="nav-item" onclick="showView('leave', this)"><i class="fas fa-walking"></i> Attendance & Leave</div>
-            <div class="nav-item" onclick="showView('discipline', this)"><i class="fas fa-gavel"></i> Discipline</div>
-            <div class="nav-item" onclick="showView('maintenance', this)"><i class="fas fa-tools"></i> Maintenance</div>
-            <div class="nav-item" onclick="showView('parents', this)"><i class="fas fa-users"></i> Parents</div>
+            <div class="nav-item" onclick="showView('leave', this)" tabindex="0" role="button"><i class="fas fa-walking"></i> Attendance & Leave</div>
+            <div class="nav-item" onclick="showView('discipline', this)" tabindex="0" role="button"><i class="fas fa-gavel"></i> Discipline</div>
+            <div class="nav-item" onclick="showView('maintenance', this)" tabindex="0" role="button"><i class="fas fa-tools"></i> Maintenance</div>
+            <div class="nav-item" onclick="showView('parents', this)" tabindex="0" role="button"><i class="fas fa-users"></i> Parents</div>
 
             <div class="nav-label" id="lbl-admin">Administration</div>
-            <div class="nav-item" onclick="showView('inventory', this)"><i class="fas fa-boxes"></i> Inventory</div>
-            <div id="financialsLink" class="nav-item" onclick="showView('financials', this)"><i class="fas fa-file-invoice-dollar"></i> Financials</div>
-            <div id="reportsLink" class="nav-item" onclick="showView('reports', this)"><i class="fas fa-chart-line"></i> Reports</div>
-            <div id="settingsLink" class="nav-item" onclick="showView('settings', this)"><i class="fas fa-cog"></i> Settings</div>
+            <div class="nav-item" onclick="showView('inventory', this)" tabindex="0" role="button"><i class="fas fa-boxes"></i> Inventory</div>
+            <div id="financialsLink" class="nav-item" onclick="showView('financials', this)" tabindex="0" role="button"><i class="fas fa-file-invoice-dollar"></i> Financials</div>
+            <div id="reportsLink" class="nav-item" onclick="showView('reports', this)" tabindex="0" role="button"><i class="fas fa-chart-line"></i> Reports</div>
+            <div id="settingsLink" class="nav-item" onclick="showView('settings', this)" tabindex="0" role="button"><i class="fas fa-cog"></i> Settings</div>
         </nav>
 
         <div class="user-footer">
@@ -97,7 +97,7 @@
     <div class="main-wrapper">
         <header class="top-nav">
             <div class="top-nav-left">
-                <div class="hostel-branding" style="display: flex; align-items: center; cursor: pointer;" onclick="showView('overview', null)">
+                <div class="hostel-branding" style="display: flex; align-items: center; cursor: pointer;" onclick="showView('overview', null)" tabindex="0" role="button">
                     <div id="hostelLogoPlaceholder" style="width:32px; height:32px; background:var(--primary); border-radius:8px; margin-right:12px;"></div>
                     <img id="hostelLogoImg" src="" style="height:32px; margin-right:12px; display:none; border-radius:4px;">
                     <span id="hostelNameDisplay" style="font-weight: 800; font-size: 18px; letter-spacing: -0.025em; color: var(--text-main);">HostelPro</span>
@@ -106,7 +106,7 @@
 
             <div class="search-box">
                 <i class="fas fa-search"></i>
-                <input type="text" placeholder="Global Search (AdNo or Name)..." onkeyup="globalSearch(this.value)">
+                <input type="text" placeholder="Global Search (AdNo or Name)..." aria-label="Global Search" onkeyup="globalSearch(this.value)">
             </div>
 
             <div class="top-nav-right" style="display: flex; align-items: center;">
@@ -168,7 +168,7 @@
 
                         <div style="display:flex; gap:5px; margin-bottom:15px;">
                             <input type="text" id="noticeInput" placeholder="Post an announcement..." style="flex:1; padding:8px; border:1px solid #ddd; border-radius:4px;">
-                            <button id="btnPostNotice" onclick="postNotice()" style="padding:8px 15px; background:var(--primary); color:white; border:none; border-radius:4px; cursor:pointer;">
+                            <button id="btnPostNotice" onclick="postNotice()" aria-label="Post Notice" style="padding:8px 15px; background:var(--primary); color:white; border:none; border-radius:4px; cursor:pointer;">
                                 <i class="fas fa-paper-plane"></i>
                             </button>
                         </div>
