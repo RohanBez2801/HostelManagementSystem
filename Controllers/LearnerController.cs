@@ -14,8 +14,6 @@ namespace HostelManagementSystem.Controllers
     [SupportedOSPlatform("windows")]
     public class LearnerController : ControllerBase
     {
-        private readonly string _connString = $@"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={Path.Combine(Directory.GetCurrentDirectory(), "Data", "HostelDb.accdb")};";
-
         // --- 1. THE ROBUST DATABASE FIXER ---
         [HttpGet("fix-db")]
         public IActionResult FixDatabase()
@@ -23,10 +21,8 @@ namespace HostelManagementSystem.Controllers
             var log = new List<string>();
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
-                    conn.Open();
-
                     // A. Ensure Columns Exist (Extended List)
                     var columns = new Dictionary<string, string> {
                         // Basic
@@ -136,9 +132,8 @@ namespace HostelManagementSystem.Controllers
         {
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
-                    conn.Open();
                     string sql = "SELECT * FROM [tbl_Learners] WHERE [LearnerID] = ?";
                     using (var cmd = new OleDbCommand(sql, conn))
                     {
@@ -244,9 +239,8 @@ namespace HostelManagementSystem.Controllers
             var list = new List<object>();
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
-                    conn.Open();
                     // UPDATED SQL: Joins Blocks and sorts hierarchically
                     string sql = @"
                         SELECT L.[LearnerID], L.[AdmissionNo], L.[Surname], L.[Names], L.[FullName], 
@@ -309,10 +303,8 @@ namespace HostelManagementSystem.Controllers
             // But we will add the basics + room assignment.
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
-                    conn.Open();
-
                     string surname = req.Surname ?? "";
                     string names = req.Names ?? "";
                     string fullName = $"{surname} {names}".Trim();
@@ -355,9 +347,8 @@ namespace HostelManagementSystem.Controllers
         {
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
-                    conn.Open();
                     int roomId = -1;
                     using (OleDbCommand cmdFind = new OleDbCommand("SELECT [RoomID] FROM [tbl_Learners] WHERE [LearnerID] = ?", conn))
                     {
@@ -392,10 +383,8 @@ namespace HostelManagementSystem.Controllers
         {
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
-                    conn.Open();
-
                     string fullName = $"{r.Surname} {r.Names}".Trim();
 
                     string sql = @"UPDATE [tbl_Learners] SET

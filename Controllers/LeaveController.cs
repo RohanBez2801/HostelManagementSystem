@@ -12,17 +12,14 @@ namespace HostelManagementSystem.Controllers
     [SupportedOSPlatform("windows")]
     public class LeaveController : ControllerBase
     {
-        private readonly string _connString = $@"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={Path.Combine(Directory.GetCurrentDirectory(), "Data", "HostelDb.accdb")};";
-
         [HttpGet("all")]
         public IActionResult GetAllLeave()
         {
             var leaveRecords = new List<object>();
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
-                    conn.Open();
                     // *** FIX: This line auto-creates the missing table ***
                     EnsureLeaveTable(conn);
 
@@ -66,9 +63,8 @@ namespace HostelManagementSystem.Controllers
         {
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
-                    conn.Open();
                     EnsureLeaveTable(conn);
 
                     string sql = "INSERT INTO [tbl_Leave] ([LearnerID], [LeaveType], [DepartureDate], [ExpectedReturnDate], [Status], [ContactPerson]) VALUES (?, ?, ?, ?, 'Away', ?)";
@@ -92,9 +88,8 @@ namespace HostelManagementSystem.Controllers
         {
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
-                    conn.Open();
                     EnsureLeaveTable(conn);
 
                     string sql = "UPDATE [tbl_Leave] SET [Status] = 'Returned' WHERE [LeaveID] = ?";

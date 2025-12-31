@@ -12,17 +12,14 @@ namespace HostelManagementSystem.Controllers
     [SupportedOSPlatform("windows")]
     public class NoticeController : ControllerBase
     {
-        private readonly string _connString = $@"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={Path.Combine(Directory.GetCurrentDirectory(), "Data", "HostelDb.accdb")};";
-
         [HttpGet("all")]
         public IActionResult GetNotices()
         {
             var list = new List<object>();
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
-                    conn.Open();
                     EnsureNoticeTable(conn); // Auto-create table
 
                     string sql = "SELECT * FROM tbl_Notices ORDER BY DatePosted DESC";
@@ -51,9 +48,8 @@ namespace HostelManagementSystem.Controllers
         {
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
-                    conn.Open();
                     EnsureNoticeTable(conn);
 
                     string sql = "INSERT INTO tbl_Notices (Message, Priority, DatePosted) VALUES (?, ?, ?)";
@@ -75,9 +71,8 @@ namespace HostelManagementSystem.Controllers
         {
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
-                    conn.Open();
                     using (var cmd = new OleDbCommand("DELETE FROM tbl_Notices WHERE NoticeID = ?", conn))
                     {
                         cmd.Parameters.AddWithValue("?", id);

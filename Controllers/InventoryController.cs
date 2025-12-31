@@ -12,17 +12,14 @@ namespace HostelManagementSystem.Controllers
     [SupportedOSPlatform("windows")]
     public class InventoryController : ControllerBase
     {
-        private readonly string _connString = $@"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={Path.Combine(Directory.GetCurrentDirectory(), "Data", "HostelDb.accdb")};";
-
         [HttpGet("all")]
         public IActionResult GetAllInventory()
         {
             var items = new List<object>();
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
-                    conn.Open();
                     EnsureInventoryTable(conn);
                     // Left Join with Rooms to get Room Number if assigned to a room
                     string sql = @"SELECT i.InventoryID, i.ItemName, i.Category, i.Quantity, i.Condition, r.RoomNumber
@@ -57,9 +54,8 @@ namespace HostelManagementSystem.Controllers
         {
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
-                    conn.Open();
                     EnsureInventoryTable(conn);
                     string sql = "INSERT INTO tbl_Inventory (ItemName, Category, Quantity, Condition, RoomID) VALUES (?, ?, ?, ?, ?)";
                     using (var cmd = new OleDbCommand(sql, conn))
@@ -87,9 +83,8 @@ namespace HostelManagementSystem.Controllers
         {
              try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
-                    conn.Open();
                     string sql = "DELETE FROM tbl_Inventory WHERE InventoryID = ?";
                     using (var cmd = new OleDbCommand(sql, conn))
                     {

@@ -12,25 +12,17 @@ namespace HostelManagementSystem.Controllers
     [SupportedOSPlatform("windows")]
     public class RoomController : ControllerBase
     {
-        private readonly string _connString = $@"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={Path.Combine(Directory.GetCurrentDirectory(), "Data", "HostelDb.accdb")};";
-
-        // ... [GetAllRooms, GetAvailableRooms, GetAllBlocks, AddRoom, AddBlock remain unchanged from previous versions, essentially] ...
-        // ... [Just ensure GetAvailableRooms includes BlockGender logic if using it] ...
-
         [HttpGet("all")]
         public IActionResult GetAllRooms()
-        { /* ... same as before ... */
-            // Logic: Select r.*, b.BlockName ...
-            // Return List ...
+        {
             var rooms = new List<object>();
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
                     string sql = @"SELECT r.RoomID, r.RoomNumber, r.BlockID, b.BlockName, b.BlockGender, r.Capacity, 
                                (SELECT COUNT(*) FROM tbl_Learners l WHERE l.RoomID = r.RoomID) as RealOccupancy
                         FROM tbl_Rooms r LEFT JOIN tbl_Blocks b ON r.BlockID = b.BlockID ORDER BY r.RoomNumber ASC";
-                    conn.Open();
                     using (var cmd = new OleDbCommand(sql, conn)) using (var reader = cmd.ExecuteReader())
                     {
                         while (reader.Read())
@@ -59,12 +51,11 @@ namespace HostelManagementSystem.Controllers
             var rooms = new List<object>();
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
                     string sql = @"SELECT r.RoomID, r.RoomNumber, b.BlockName, b.BlockGender, r.Capacity, 
                                (SELECT COUNT(*) FROM tbl_Learners l WHERE l.RoomID = r.RoomID) as RealOccupancy
                         FROM tbl_Rooms r LEFT JOIN tbl_Blocks b ON r.BlockID = b.BlockID ORDER BY r.RoomNumber ASC";
-                    conn.Open();
                     using (var cmd = new OleDbCommand(sql, conn)) using (var reader = cmd.ExecuteReader())
                     {
                         while (reader.Read())
@@ -96,10 +87,9 @@ namespace HostelManagementSystem.Controllers
             var blocks = new List<object>();
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
                     string sql = "SELECT BlockID, BlockName, BlockGender FROM tbl_Blocks ORDER BY BlockName ASC";
-                    conn.Open();
                     using (var cmd = new OleDbCommand(sql, conn)) using (var reader = cmd.ExecuteReader())
                     {
                         while (reader.Read())
@@ -118,7 +108,7 @@ namespace HostelManagementSystem.Controllers
         {
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
                     string sql = "INSERT INTO [tbl_Rooms] ([RoomNumber], [BlockID], [Capacity], [CurrentOccupancy]) VALUES (?, ?, ?, 0)";
                     using (var cmd = new OleDbCommand(sql, conn))
@@ -126,7 +116,7 @@ namespace HostelManagementSystem.Controllers
                         cmd.Parameters.AddWithValue("?", room.RoomNumber);
                         cmd.Parameters.AddWithValue("?", room.BlockID);
                         cmd.Parameters.AddWithValue("?", room.Capacity);
-                        conn.Open(); cmd.ExecuteNonQuery();
+                        cmd.ExecuteNonQuery();
                     }
                 }
                 return Ok(new { Message = "Room Added" });
@@ -139,14 +129,14 @@ namespace HostelManagementSystem.Controllers
         {
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
                     string sql = "INSERT INTO [tbl_Blocks] ([BlockName], [BlockGender]) VALUES (?, ?)";
                     using (var cmd = new OleDbCommand(sql, conn))
                     {
                         cmd.Parameters.AddWithValue("?", block.BlockName);
                         cmd.Parameters.AddWithValue("?", block.BlockGender ?? "Mixed");
-                        conn.Open(); cmd.ExecuteNonQuery();
+                        cmd.ExecuteNonQuery();
                     }
                 }
                 return Ok(new { Message = "Block Added" });
@@ -161,7 +151,7 @@ namespace HostelManagementSystem.Controllers
             var occupants = new List<object>();
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
                     // Fixed SQL: Select separate name columns
                     string sql = "SELECT LearnerID, Surname, Names, Grade FROM tbl_Learners WHERE RoomID = ?";
@@ -169,7 +159,6 @@ namespace HostelManagementSystem.Controllers
                     OleDbCommand cmd = new OleDbCommand(sql, conn);
                     cmd.Parameters.AddWithValue("?", roomId);
 
-                    conn.Open();
                     using (var reader = cmd.ExecuteReader())
                     {
                         while (reader.Read())

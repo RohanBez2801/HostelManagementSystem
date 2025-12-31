@@ -11,8 +11,6 @@ namespace HostelManagementSystem.Controllers
     [SupportedOSPlatform("windows")]
     public class DashboardController : ControllerBase
     {
-        private readonly string _connString = $@"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={Path.Combine(Directory.GetCurrentDirectory(), "Data", "HostelDb.accdb")};";
-
         [HttpGet("stats")]
         public IActionResult GetStats()
         {
@@ -23,10 +21,8 @@ namespace HostelManagementSystem.Controllers
                 int pendingMaintenance = 0;
                 int lowStockItems = 0;
 
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
-                    conn.Open();
-
                     // 1. Total Students
                     using (var cmd = new OleDbCommand("SELECT COUNT(*) FROM tbl_Learners", conn))
                         totalStudents = (int)cmd.ExecuteScalar();

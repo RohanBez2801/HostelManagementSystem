@@ -12,7 +12,6 @@ namespace HostelManagementSystem.Controllers
     [SupportedOSPlatform("windows")]
     public class FinancialsController : ControllerBase
     {
-        private readonly string _connString = $@"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={Path.Combine(Directory.GetCurrentDirectory(), "Data", "HostelDb.accdb")};";
         private const int VOTE_INCOME_HDF = 100;
         private const int VOTE_INCOME_MOE = 101;
 
@@ -23,7 +22,7 @@ namespace HostelManagementSystem.Controllers
             var transactions = new List<object>();
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
                     // DISTINCTROW ensures we don't get duplicates if join acts up
                     string sql = @"
@@ -34,7 +33,6 @@ namespace HostelManagementSystem.Controllers
                         LEFT JOIN [tbl_Votes] v ON p.[VoteID] = v.[VoteID]
                         ORDER BY p.[PaymentDate] DESC";
 
-                    conn.Open();
                     using (var cmd = new OleDbCommand(sql, conn))
                     using (var reader = cmd.ExecuteReader())
                     {
@@ -76,9 +74,8 @@ namespace HostelManagementSystem.Controllers
             int count = 0;
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
-                    conn.Open();
                     foreach (var row in rows)
                     {
                         if (row.AmountHDF > 0)
@@ -156,9 +153,8 @@ namespace HostelManagementSystem.Controllers
         {
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
-                    conn.Open();
                     // Check Receipt Duplicate
                     if (!string.IsNullOrEmpty(req.Reference))
                     {
@@ -201,9 +197,8 @@ namespace HostelManagementSystem.Controllers
         {
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
-                    conn.Open();
                     string sql = @"INSERT INTO [tbl_Payments] ([TotalAmount], [PaymentDate], [TransactionType], [VoteID], [Payee], [MinistryReceiptNo]) VALUES (?, ?, 'Expense', ?, ?, ?)";
                     using (var cmd = new OleDbCommand(sql, conn))
                     {
@@ -224,11 +219,10 @@ namespace HostelManagementSystem.Controllers
         public IActionResult GetVotes()
         {
             var votes = new List<object>();
-            using (OleDbConnection conn = new OleDbConnection(_connString))
+            using (var conn = Helpers.DbHelper.GetConnection())
             {
                 try
                 {
-                    conn.Open();
                     var cmd = new OleDbCommand("SELECT * FROM [tbl_Votes] ORDER BY [VoteCode]", conn);
                     var reader = cmd.ExecuteReader();
                     while (reader.Read()) { votes.Add(new { Id = reader["VoteID"], Name = reader["VoteName"] }); }
@@ -243,9 +237,8 @@ namespace HostelManagementSystem.Controllers
         {
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
-                    conn.Open();
                     string sql = $@"
                         SELECT 
                             SUM(IIF([TransactionType]='Income', [TotalAmount], 0)) as TotalIncome,
@@ -278,9 +271,8 @@ namespace HostelManagementSystem.Controllers
             double totalPaid = 0;
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
-                    conn.Open();
                     string learnerName = "", admissionNo = "", parentName = "Parent", parentPhone = "", address = "";
                     string learnerSql = @"SELECT [Surname], [Names], [AdmissionNo], [FatherName], [FatherPhone], [MotherName], [MotherPhone], [HomeAddress] 
                                           FROM [tbl_Learners] WHERE [LearnerID] = ?";

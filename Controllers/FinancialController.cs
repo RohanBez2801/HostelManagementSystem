@@ -9,9 +9,6 @@ namespace HostelManagementSystem.Controllers
     [ApiController]
     public class FinancialController : ControllerBase
     {
-        // Connection string for MS Access
-        private string connString = @"Provider=Microsoft.ACE.OLEDB.12.0;Data Source=|DataDirectory|\HostelDb.accdb;";
-
         /// <summary>
         /// Records a payment and automatically splits it between MoE and HDF funds.
         /// </summary>
@@ -20,11 +17,10 @@ namespace HostelManagementSystem.Controllers
         {
             if (req == null) return BadRequest("Invalid payment data.");
 
-            using (OleDbConnection conn = new OleDbConnection(connString))
+            using (var conn = Helpers.DbHelper.GetConnection())
             {
                 try
                 {
-                    conn.Open();
                     int currentYear = DateTime.Now.Year;
 
                     // 1. CHECK PREVIOUS MOE PAYMENTS FOR THIS YEAR
@@ -100,13 +96,12 @@ namespace HostelManagementSystem.Controllers
         public IActionResult GetAllPayments()
         {
             var payments = new List<object>();
-            using (OleDbConnection conn = new OleDbConnection(connString))
+            using (var conn = Helpers.DbHelper.GetConnection())
             {
                 // Note: In a real app, you'd JOIN with tbl_Learners to get the name.
                 // Since Learners are in a different DB context, you may need to map names in the frontend.
                 string sql = "SELECT * FROM tbl_Payments ORDER BY PaymentDate DESC";
 
-                conn.Open();
                 using (OleDbCommand cmd = new OleDbCommand(sql, conn))
                 using (OleDbDataReader reader = cmd.ExecuteReader())
                 {
@@ -136,12 +131,11 @@ namespace HostelManagementSystem.Controllers
         public IActionResult GetStatement(int learnerId)
         {
             var statementLines = new List<object>();
-            using (OleDbConnection conn = new OleDbConnection(connString))
+            using (var conn = Helpers.DbHelper.GetConnection())
             {
                 // Query to get all payments for this student, newest first
                 string sql = "SELECT * FROM tbl_Payments WHERE LearnerID = ? ORDER BY PaymentDate DESC";
 
-                conn.Open();
                 using (OleDbCommand cmd = new OleDbCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue("?", learnerId);
@@ -170,10 +164,9 @@ namespace HostelManagementSystem.Controllers
         [HttpGet("summary")]
         public IActionResult GetFinancialSummary()
         {
-            using (OleDbConnection conn = new OleDbConnection(connString))
+            using (var conn = Helpers.DbHelper.GetConnection())
             {
                 string sql = "SELECT SUM(TotalAmount) as Total, SUM(MoE_Portion) as MoE, SUM(HDF_Portion) as HDF FROM tbl_Payments WHERE YEAR(PaymentDate) = ?";
-                conn.Open();
                 using (OleDbCommand cmd = new OleDbCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue("?", DateTime.Now.Year);
