@@ -146,6 +146,12 @@ body, html {
         transform: translateY(0);
     }
 
+    .btn-login:disabled {
+        background: #94a3b8;
+        cursor: not-allowed;
+        transform: none;
+    }
+
 #errorMessage {
     margin-top: 20px;
     padding: 12px;
