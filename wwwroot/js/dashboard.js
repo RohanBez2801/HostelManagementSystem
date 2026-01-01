@@ -184,20 +184,47 @@ async function updateStats() {
     } catch (err) { console.error("Stats Error:", err); }
 }
 
-// --- 4. GLOBAL SEARCH ---
-async function globalSearch(term) {
+// --- 4. GLOBAL SEARCH (Optimized with Debounce & Cache) ---
+let searchCache = null;
+let searchCacheTime = 0;
+let debounceTimer;
+
+async function fetchLearnersWithCache() {
+    const now = Date.now();
+    // Cache valid for 60 seconds
+    if (searchCache && (now - searchCacheTime < 60000)) {
+        return searchCache;
+    }
+
+    try {
+        const res = await fetch('/api/learner/list-all');
+        if (!res.ok) return [];
+        
+        const data = await res.json();
+        searchCache = Array.isArray(data) ? data : (data.value || []);
+        searchCacheTime = now;
+        return searchCache;
+    } catch (err) {
+        console.error("Fetch Error:", err);
+        return [];
+    }
+}
+
+function globalSearch(term) {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+        performSearch(term);
+    }, 300);
+}
+
+async function performSearch(term) {
     if (term.length < 2) {
         document.getElementById('search-results-dropdown')?.remove();
         return;
     }
 
     try {
-        const res = await fetch('/api/learner/list-all');
-        if(!res.ok) return; 
-        
-        const data = await res.json();
-        const learners = Array.isArray(data) ? data : (data.value || []);
-
+        const learners = await fetchLearnersWithCache();
         const filtered = learners.filter(s =>
             (s.name || '').toLowerCase().includes(term.toLowerCase()) ||
             (s.adNo || '').toLowerCase().includes(term.toLowerCase())
