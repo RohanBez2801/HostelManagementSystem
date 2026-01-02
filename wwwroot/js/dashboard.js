@@ -185,26 +185,41 @@ async function updateStats() {
 }
 
 // --- 4. GLOBAL SEARCH ---
+let searchCache = null;
+let lastSearchFetch = 0;
+let searchDebounceTimer = null;
+const CACHE_DURATION = 60000; // 60 seconds
+
 async function globalSearch(term) {
+    clearTimeout(searchDebounceTimer);
+
     if (term.length < 2) {
         document.getElementById('search-results-dropdown')?.remove();
         return;
     }
 
-    try {
-        const res = await fetch('/api/learner/list-all');
-        if(!res.ok) return; 
-        
-        const data = await res.json();
-        const learners = Array.isArray(data) ? data : (data.value || []);
+    searchDebounceTimer = setTimeout(async () => {
+        try {
+            const now = Date.now();
+            if (!searchCache || (now - lastSearchFetch > CACHE_DURATION)) {
+                const res = await fetch('/api/learner/list-all');
+                if(!res.ok) return;
 
-        const filtered = learners.filter(s =>
-            (s.name || '').toLowerCase().includes(term.toLowerCase()) ||
-            (s.adNo || '').toLowerCase().includes(term.toLowerCase())
-        );
+                const data = await res.json();
+                searchCache = Array.isArray(data) ? data : (data.value || []);
+                lastSearchFetch = now;
+            }
 
-        displaySearchResults(filtered);
-    } catch (err) { console.error("Search Error:", err); }
+            const learners = searchCache;
+
+            const filtered = learners.filter(s =>
+                (s.name || '').toLowerCase().includes(term.toLowerCase()) ||
+                (s.adNo || '').toLowerCase().includes(term.toLowerCase())
+            );
+
+            displaySearchResults(filtered);
+        } catch (err) { console.error("Search Error:", err); }
+    }, 300);
 }
 
 function displaySearchResults(results) {
