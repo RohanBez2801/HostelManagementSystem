@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Data.OleDb;
 using System.Runtime.Versioning;
+using System.IO;
 
 namespace HostelManagementSystem.Controllers
 {
@@ -11,68 +12,53 @@ namespace HostelManagementSystem.Controllers
     [SupportedOSPlatform("windows")]
     public class MaintenanceController : ControllerBase
     {
-        /// <summary>
-        /// Retrieves all maintenance issues, joined with Room data for display.
-        /// </summary>
+        private readonly string connString = $@"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={Path.Combine(Directory.GetCurrentDirectory(), "Data", "HostelDb.accdb")};";
+
         [HttpGet("all")]
         public IActionResult GetAll()
         {
             var list = new List<object>();
-            using (var conn = Helpers.DbHelper.GetConnection())
+            using (OleDbConnection conn = new OleDbConnection(connString))
             {
                 try
                 {
-                    // INNER JOIN ensures we get the human-readable RoomNumber from tbl_Rooms. Bracketing all identifiers.
+                    // FIX: Changed INNER JOIN to LEFT JOIN so repairs show up even if room is deleted.
                     string sql = @"SELECT m.[MaintenanceID], m.[IssueDescription], m.[Priority], m.[ReportedDate], m.[Status], r.[RoomNumber] 
                                  FROM [tbl_Maintenance] m 
-                                 INNER JOIN [tbl_Rooms] r ON m.[RoomID] = r.[RoomID] 
+                                 LEFT JOIN [tbl_Rooms] r ON m.[RoomID] = r.[RoomID] 
                                  ORDER BY m.[ReportedDate] DESC";
 
+                    conn.Open();
                     using (OleDbCommand cmd = new OleDbCommand(sql, conn))
                     using (var reader = cmd.ExecuteReader())
                     {
                         while (reader.Read())
                         {
-                            try
+                            list.Add(new
                             {
-                                list.Add(new
-                                {
-                                    Id = reader["MaintenanceID"],
-                                    RoomNumber = reader["RoomNumber"]?.ToString() ?? "N/A",
-                                    IssueDescription = reader["IssueDescription"]?.ToString() ?? "-",
-                                    Priority = reader["Priority"]?.ToString() ?? "Medium",
-                                    Status = reader["Status"]?.ToString() ?? "Pending",
-                                    ReportedDate = reader["ReportedDate"] != DBNull.Value ? Convert.ToDateTime(reader["ReportedDate"]) : DateTime.MinValue
-                                });
-                            }
-                            catch (Exception rowEx)
-                            {
-                                Console.WriteLine($"Error reading maintenance row: {rowEx.Message}");
-                            }
+                                Id = reader["MaintenanceID"],
+                                RoomNumber = reader["RoomNumber"] != DBNull.Value ? reader["RoomNumber"].ToString() : "Deleted Room",
+                                IssueDescription = reader["IssueDescription"]?.ToString() ?? "-",
+                                Priority = reader["Priority"]?.ToString() ?? "Medium",
+                                Status = reader["Status"]?.ToString() ?? "Pending",
+                                ReportedDate = reader["ReportedDate"] != DBNull.Value ? Convert.ToDateTime(reader["ReportedDate"]) : DateTime.MinValue
+                            });
                         }
                     }
                     return Ok(list);
                 }
-                catch (Exception ex)
-                {
-                    return StatusCode(500, new { Message = "Database Error: " + ex.Message });
-                }
+                catch (Exception ex) { return StatusCode(500, new { Message = "Database Error: " + ex.Message }); }
             }
         }
 
-        /// <summary>
-        /// Records a new maintenance defect reported by staff.
-        /// </summary>
         [HttpPost("add")]
         public IActionResult AddIssue([FromBody] MaintenanceRequest req)
         {
             if (req == null) return BadRequest("Invalid request data.");
-
-            using (var conn = Helpers.DbHelper.GetConnection())
+            using (OleDbConnection conn = new OleDbConnection(connString))
             {
                 try
                 {
-                    // Access requires brackets around reserved words like [Status]
                     string sql = @"INSERT INTO [tbl_Maintenance] 
                                  ([RoomID], [IssueDescription], [Priority], [ReportedDate], [Status]) 
                                  VALUES (?, ?, ?, ?, ?)";
@@ -84,54 +70,41 @@ namespace HostelManagementSystem.Controllers
                         cmd.Parameters.AddWithValue("?", req.Priority);
                         cmd.Parameters.AddWithValue("?", req.ReportedDate);
                         cmd.Parameters.AddWithValue("?", req.Status);
-
+                        conn.Open();
                         cmd.ExecuteNonQuery();
                     }
                     return Ok(new { message = "Issue recorded successfully" });
                 }
-                catch (Exception ex)
-                {
-                    return StatusCode(500, $"Database Error: {ex.Message}");
-                }
+                catch (Exception ex) { return StatusCode(500, $"Database Error: {ex.Message}"); }
             }
         }
 
-        /// <summary>
-        /// Updates the status of an issue (e.g., marking it as Fixed).
-        /// </summary>
         [HttpPut("update-status/{id}")]
         public IActionResult UpdateStatus(int id, [FromBody] string newStatus)
         {
-            using (var conn = Helpers.DbHelper.GetConnection())
+            using (OleDbConnection conn = new OleDbConnection(connString))
             {
                 try
                 {
                     string sql = "UPDATE [tbl_Maintenance] SET [Status] = ? WHERE [MaintenanceID] = ?";
-
                     using (OleDbCommand cmd = new OleDbCommand(sql, conn))
                     {
                         cmd.Parameters.AddWithValue("?", newStatus);
                         cmd.Parameters.AddWithValue("?", id);
-
+                        conn.Open();
                         int rows = cmd.ExecuteNonQuery();
                         if (rows > 0) return Ok();
                         return NotFound();
                     }
                 }
-                catch (Exception ex)
-                {
-                    return StatusCode(500, $"Database Error: {ex.Message}");
-                }
+                catch (Exception ex) { return StatusCode(500, $"Database Error: {ex.Message}"); }
             }
         }
 
-        /// <summary>
-        /// Deletes a maintenance record from the history.
-        /// </summary>
         [HttpDelete("delete/{id}")]
         public IActionResult DeleteIssue(int id)
         {
-            using (var conn = Helpers.DbHelper.GetConnection())
+            using (OleDbConnection conn = new OleDbConnection(connString))
             {
                 try
                 {
@@ -139,21 +112,16 @@ namespace HostelManagementSystem.Controllers
                     using (OleDbCommand cmd = new OleDbCommand(sql, conn))
                     {
                         cmd.Parameters.AddWithValue("?", id);
+                        conn.Open();
                         cmd.ExecuteNonQuery();
                     }
                     return Ok();
                 }
-                catch (Exception ex)
-                {
-                    return StatusCode(500, $"Database Error: {ex.Message}");
-                }
+                catch (Exception ex) { return StatusCode(500, $"Database Error: {ex.Message}"); }
             }
         }
     }
 
-    /// <summary>
-    /// DTO for incoming Maintenance Data.
-    /// </summary>
     public class MaintenanceRequest
     {
         public int RoomID { get; set; }
