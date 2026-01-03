@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
 using System.Data.OleDb;
@@ -12,17 +12,14 @@ namespace HostelManagementSystem.Controllers
     [SupportedOSPlatform("windows")]
     public class DiningController : ControllerBase
     {
-        private readonly string _connString = $@"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={Path.Combine(Directory.GetCurrentDirectory(), "Data", "HostelDb.accdb")};";
-
         [HttpGet("log")]
         public IActionResult GetDiningLog()
         {
             var logs = new List<object>();
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
-                    conn.Open();
                     EnsureTable(conn);
                     string sql = "SELECT * FROM tbl_DiningLog ORDER BY DateLogged DESC";
                     using (var cmd = new OleDbCommand(sql, conn))
@@ -52,9 +49,8 @@ namespace HostelManagementSystem.Controllers
         {
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
-                    conn.Open();
                     EnsureTable(conn);
                     string sql = "INSERT INTO tbl_DiningLog (Supplier, Item, Quantity, ReceivedBy, DateLogged) VALUES (?, ?, ?, ?, ?)";
                     using (var cmd = new OleDbCommand(sql, conn))

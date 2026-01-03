@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
 using System.Data.OleDb;
@@ -11,9 +11,6 @@ namespace HostelManagementSystem.Controllers
     [SupportedOSPlatform("windows")]
     public class MaintenanceController : ControllerBase
     {
-        // Connection string for MS Access
-        private string connString = $@"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={Path.Combine(Directory.GetCurrentDirectory(), "Data", "HostelDb.accdb")};";
-
         /// <summary>
         /// Retrieves all maintenance issues, joined with Room data for display.
         /// </summary>
@@ -21,18 +18,16 @@ namespace HostelManagementSystem.Controllers
         public IActionResult GetAll()
         {
             var list = new List<object>();
-            using (OleDbConnection conn = new OleDbConnection(connString))
+            using (var conn = Helpers.DbHelper.GetConnection())
             {
                 try
                 {
-                    // FIX: Changed INNER JOIN to LEFT JOIN. 
-                    // This ensures maintenance records appear even if the room was deleted.
+                    // INNER JOIN ensures we get the human-readable RoomNumber from tbl_Rooms. Bracketing all identifiers.
                     string sql = @"SELECT m.[MaintenanceID], m.[IssueDescription], m.[Priority], m.[ReportedDate], m.[Status], r.[RoomNumber] 
                                  FROM [tbl_Maintenance] m 
-                                 LEFT JOIN [tbl_Rooms] r ON m.[RoomID] = r.[RoomID] 
+                                 INNER JOIN [tbl_Rooms] r ON m.[RoomID] = r.[RoomID] 
                                  ORDER BY m.[ReportedDate] DESC";
 
-                    conn.Open();
                     using (OleDbCommand cmd = new OleDbCommand(sql, conn))
                     using (var reader = cmd.ExecuteReader())
                     {
@@ -43,8 +38,7 @@ namespace HostelManagementSystem.Controllers
                                 list.Add(new
                                 {
                                     Id = reader["MaintenanceID"],
-                                    // FIX: Handle null RoomNumber explicitly (e.g. if room was deleted)
-                                    RoomNumber = reader["RoomNumber"] != DBNull.Value ? reader["RoomNumber"].ToString() : "Unknown/Del",
+                                    RoomNumber = reader["RoomNumber"]?.ToString() ?? "N/A",
                                     IssueDescription = reader["IssueDescription"]?.ToString() ?? "-",
                                     Priority = reader["Priority"]?.ToString() ?? "Medium",
                                     Status = reader["Status"]?.ToString() ?? "Pending",
@@ -74,7 +68,7 @@ namespace HostelManagementSystem.Controllers
         {
             if (req == null) return BadRequest("Invalid request data.");
 
-            using (OleDbConnection conn = new OleDbConnection(connString))
+            using (var conn = Helpers.DbHelper.GetConnection())
             {
                 try
                 {
@@ -91,7 +85,6 @@ namespace HostelManagementSystem.Controllers
                         cmd.Parameters.AddWithValue("?", req.ReportedDate);
                         cmd.Parameters.AddWithValue("?", req.Status);
 
-                        conn.Open();
                         cmd.ExecuteNonQuery();
                     }
                     return Ok(new { message = "Issue recorded successfully" });
@@ -109,7 +102,7 @@ namespace HostelManagementSystem.Controllers
         [HttpPut("update-status/{id}")]
         public IActionResult UpdateStatus(int id, [FromBody] string newStatus)
         {
-            using (OleDbConnection conn = new OleDbConnection(connString))
+            using (var conn = Helpers.DbHelper.GetConnection())
             {
                 try
                 {
@@ -120,7 +113,6 @@ namespace HostelManagementSystem.Controllers
                         cmd.Parameters.AddWithValue("?", newStatus);
                         cmd.Parameters.AddWithValue("?", id);
 
-                        conn.Open();
                         int rows = cmd.ExecuteNonQuery();
                         if (rows > 0) return Ok();
                         return NotFound();
@@ -139,7 +131,7 @@ namespace HostelManagementSystem.Controllers
         [HttpDelete("delete/{id}")]
         public IActionResult DeleteIssue(int id)
         {
-            using (OleDbConnection conn = new OleDbConnection(connString))
+            using (var conn = Helpers.DbHelper.GetConnection())
             {
                 try
                 {
@@ -147,7 +139,6 @@ namespace HostelManagementSystem.Controllers
                     using (OleDbCommand cmd = new OleDbCommand(sql, conn))
                     {
                         cmd.Parameters.AddWithValue("?", id);
-                        conn.Open();
                         cmd.ExecuteNonQuery();
                     }
                     return Ok();

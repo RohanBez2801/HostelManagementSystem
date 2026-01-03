@@ -1,4 +1,4 @@
-﻿/* --- CORE VARIABLES --- */
+/* --- CORE VARIABLES --- */
 :root {
     /* Main Palette */
     --primary: #2563eb;
@@ -100,6 +100,12 @@ body {
         background: var(--primary);
         color: white;
         box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+    }
+
+    .nav-item:focus-visible, .hostel-branding:focus-visible {
+        outline: 2px solid white;
+        outline-offset: -2px;
+        background: var(--sidebar-hover);
     }
 
 .user-footer {

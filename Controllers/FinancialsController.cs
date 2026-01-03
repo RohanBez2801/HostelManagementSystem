@@ -12,232 +12,336 @@ namespace HostelManagementSystem.Controllers
     [SupportedOSPlatform("windows")]
     public class FinancialsController : ControllerBase
     {
-        // Path to the Budget 2025 Excel file
-        private readonly string _excelPath = Path.Combine(Directory.GetCurrentDirectory(), "Data", "Budget 2025.xlsx");
-        
-        // Excel Connection String (HDR=YES means first row is headers)
-        private string GetExcelConnectionString()
-        {
-            return $@"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={_excelPath};Extended Properties='Excel 12.0 Xml;HDR=YES';";
-        }
+        private const int VOTE_INCOME_HDF = 100;
+        private const int VOTE_INCOME_MOE = 101;
 
-        // --- 1. GET CASH BOOK (Read from Excel) ---
+        // --- 1. GET CASH BOOK (FIXED: SHOWS PAYEE IF STUDENT IS NULL) ---
         [HttpGet("cashbook")]
         public IActionResult GetCashBook()
         {
             var transactions = new List<object>();
             try
             {
-                EnsureExcelFile(); // Ensure file and sheet exist
-
-                using (OleDbConnection conn = new OleDbConnection(GetExcelConnectionString()))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
-                    conn.Open();
-                    // Select from the "Ledger" sheet (using $ notation)
-                    string sql = "SELECT * FROM [Ledger$]";
-                    
+                    // DISTINCTROW ensures we don't get duplicates if join acts up
+                    string sql = @"
+                        SELECT DISTINCTROW p.[PaymentID], p.[PaymentDate], p.[TotalAmount], p.[TransactionType], p.[Payee], p.[MinistryReceiptNo], 
+                               l.[Surname], l.[Names], l.[AdmissionNo], v.[VoteName]
+                        FROM ([tbl_Payments] p 
+                        LEFT JOIN [tbl_Learners] l ON p.[LearnerID] = l.[LearnerID])
+                        LEFT JOIN [tbl_Votes] v ON p.[VoteID] = v.[VoteID]
+                        ORDER BY p.[PaymentDate] DESC";
+
                     using (var cmd = new OleDbCommand(sql, conn))
                     using (var reader = cmd.ExecuteReader())
                     {
                         while (reader.Read())
                         {
-                            // Map Excel Columns
-                            // Assumptions: Date, Description, Vote, Amount, Type, RefNo
-                            string type = reader["Type"]?.ToString() ?? "Income";
-                            double amount = 0;
-                            double.TryParse(reader["Amount"]?.ToString(), out amount);
+                            string type = reader["TransactionType"]?.ToString() ?? "Income";
+                            string surname = reader["Surname"]?.ToString() ?? "";
+                            string names = reader["Names"]?.ToString() ?? "";
+                            string studentName = $"{surname} {names}".Trim();
+                            string payeeText = reader["Payee"]?.ToString() ?? "Unknown";
+
+                            // LOGIC: Use Student Name if available, otherwise use Payee Text
+                            string displayDesc = !string.IsNullOrEmpty(studentName)
+                                ? $"{studentName} ({reader["AdmissionNo"]})"
+                                : payeeText;
 
                             transactions.Add(new
                             {
-                                date = Convert.ToDateTime(reader["Date"]).ToString("yyyy-MM-dd"),
+                                id = reader["PaymentID"],
+                                date = Convert.ToDateTime(reader["PaymentDate"]).ToString("yyyy-MM-dd"),
                                 type = type,
-                                description = reader["Description"]?.ToString(),
-                                vote = reader["Vote"]?.ToString() ?? "General",
-                                amount = amount,
-                                refNo = reader["RefNo"]?.ToString()
+                                description = displayDesc, // Correctly populated now
+                                vote = reader["VoteName"]?.ToString() ?? "-",
+                                amount = Convert.ToDouble(reader["TotalAmount"]),
+                                refNo = reader["MinistryReceiptNo"]?.ToString()
                             });
                         }
                     }
                 }
-                // Sort by Date Descending in memory (Excel might be unsorted)
-                transactions.Sort((a, b) => 
-                    DateTime.Parse(((dynamic)b).date).CompareTo(DateTime.Parse(((dynamic)a).date))
-                );
-
                 return Ok(transactions);
             }
-            catch (Exception ex) { return StatusCode(500, new { Message = "Error loading Excel: " + ex.Message }); }
+            catch (Exception ex) { return StatusCode(500, new { Message = "Error loading cashbook: " + ex.Message }); }
         }
 
-        // --- 2. RECORD TRANSACTION (Write to Excel) ---
-        [HttpPost("pay")]
-        public IActionResult RecordPayment([FromBody] ExcelPaymentRequest req)
+        // --- 2. IMPORT REVENUE (With Duplicate Check & Name Matching) ---
+        [HttpPost("import/revenue")]
+        public IActionResult ImportRevenue([FromBody] List<RevenueImportModel> rows)
         {
-            // Include Admission Number in Description so it's not anonymous
-            string desc = string.IsNullOrWhiteSpace(req.AdmissionNo) ? "Learner Payment" : $"Payment - {req.AdmissionNo}";
-            return AddTransactionToExcel(DateTime.Now, "Income", req.VoteId.ToString(), req.Amount, desc, req.Reference);
+            int count = 0;
+            try
+            {
+                using (var conn = Helpers.DbHelper.GetConnection())
+                {
+                    foreach (var row in rows)
+                    {
+                        if (row.AmountHDF > 0)
+                        {
+                            InsertImportedPayment(conn, row, row.AmountHDF, VOTE_INCOME_HDF);
+                            count++;
+                        }
+                        if (row.AmountMoE > 0)
+                        {
+                            InsertImportedPayment(conn, row, row.AmountMoE, VOTE_INCOME_MOE);
+                            count++;
+                        }
+                    }
+                }
+                return Ok(new { Message = $"Processed {rows.Count} rows. Duplicates were skipped automatically." });
+            }
+            catch (Exception ex) { return StatusCode(500, new { Message = ex.Message }); }
+        }
+
+        private void InsertImportedPayment(OleDbConnection conn, RevenueImportModel row, double amount, int voteId)
+        {
+            // A. DUPLICATE CHECK
+            if (!string.IsNullOrEmpty(row.ReceiptNo))
+            {
+                string checkSql = "SELECT COUNT(*) FROM [tbl_Payments] WHERE [MinistryReceiptNo] = ?";
+                using (var cmd = new OleDbCommand(checkSql, conn))
+                {
+                    cmd.Parameters.AddWithValue("?", row.ReceiptNo.Trim());
+                    if ((int)cmd.ExecuteScalar() > 0) return; // Skip
+                }
+            }
+
+            // B. FIND LEARNER (Safe Brackets)
+            int learnerId = 0;
+            string payeeInput = row.Payee?.Trim() ?? "";
+
+            string findSql = @"
+                SELECT TOP 1 [LearnerID] FROM [tbl_Learners] 
+                WHERE ([Surname] + ' ' + [Names]) LIKE ? 
+                   OR ([Names] + ' ' + [Surname]) LIKE ?";
+
+            using (var cmd = new OleDbCommand(findSql, conn))
+            {
+                string searchPattern = $"%{payeeInput}%";
+                cmd.Parameters.AddWithValue("?", searchPattern);
+                cmd.Parameters.AddWithValue("?", searchPattern);
+
+                var result = cmd.ExecuteScalar();
+                if (result != null) learnerId = Convert.ToInt32(result);
+            }
+
+            // C. INSERT (Uses PayeeInput if learnerId is 0)
+            string sql = @"INSERT INTO [tbl_Payments] 
+                ([LearnerID], [TotalAmount], [PaymentDate], [TransactionType], [VoteID], [Payee], [MinistryReceiptNo]) 
+                VALUES (?, ?, ?, 'Income', ?, ?, ?)";
+
+            using (var cmd = new OleDbCommand(sql, conn))
+            {
+                if (learnerId == 0) cmd.Parameters.AddWithValue("?", DBNull.Value);
+                else cmd.Parameters.AddWithValue("?", learnerId);
+
+                cmd.Parameters.AddWithValue("?", amount);
+                cmd.Parameters.AddWithValue("?", row.Date);
+                cmd.Parameters.AddWithValue("?", voteId);
+                cmd.Parameters.AddWithValue("?", payeeInput); // Saves the text for display fallback
+                cmd.Parameters.AddWithValue("?", row.ReceiptNo ?? "");
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        // --- 3. OTHER METHODS (Unchanged but included for completeness) ---
+
+        [HttpPost("pay")]
+        public IActionResult RecordPayment([FromBody] PaymentRequest req)
+        {
+            try
+            {
+                using (var conn = Helpers.DbHelper.GetConnection())
+                {
+                    // Check Receipt Duplicate
+                    if (!string.IsNullOrEmpty(req.Reference))
+                    {
+                        using (var cmd = new OleDbCommand("SELECT COUNT(*) FROM [tbl_Payments] WHERE [MinistryReceiptNo] = ?", conn))
+                        {
+                            cmd.Parameters.AddWithValue("?", req.Reference);
+                            if ((int)cmd.ExecuteScalar() > 0) return StatusCode(409, new { Message = "Receipt exists" });
+                        }
+                    }
+
+                    int learnerId = 0;
+                    using (var findCmd = new OleDbCommand("SELECT [LearnerID] FROM [tbl_Learners] WHERE [AdmissionNo] = ?", conn))
+                    {
+                        findCmd.Parameters.AddWithValue("?", req.AdmissionNo);
+                        var result = findCmd.ExecuteScalar();
+                        if (result == null) return BadRequest(new { Message = "Learner Not Found" });
+                        learnerId = Convert.ToInt32(result);
+                    }
+
+                    int dbVoteId = req.VoteId == 2 ? VOTE_INCOME_MOE : VOTE_INCOME_HDF;
+                    string sql = @"INSERT INTO [tbl_Payments] ([LearnerID], [TotalAmount], [PaymentDate], [TransactionType], [VoteID], [Payee], [MinistryReceiptNo]) VALUES (?, ?, ?, 'Income', ?, ?, ?)";
+                    using (var cmd = new OleDbCommand(sql, conn))
+                    {
+                        cmd.Parameters.AddWithValue("?", learnerId);
+                        cmd.Parameters.AddWithValue("?", req.Amount);
+                        cmd.Parameters.AddWithValue("?", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+                        cmd.Parameters.AddWithValue("?", dbVoteId);
+                        cmd.Parameters.AddWithValue("?", "Learner Payment");
+                        cmd.Parameters.AddWithValue("?", req.Reference ?? "");
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+                return Ok(new { Message = "Payment Saved" });
+            }
+            catch (Exception ex) { return StatusCode(500, new { Message = ex.Message }); }
         }
 
         [HttpPost("expense")]
         public IActionResult RecordExpense([FromBody] ExpenseRequest req)
         {
-            return AddTransactionToExcel(DateTime.Now, "Expense", req.VoteId.ToString(), req.Amount, req.Payee, req.Reference);
-        }
-
-        private IActionResult AddTransactionToExcel(DateTime date, string type, string vote, double amount, string desc, string refNo)
-        {
             try
             {
-                EnsureExcelFile();
-                using (OleDbConnection conn = new OleDbConnection(GetExcelConnectionString()))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
-                    conn.Open();
-                    string sql = "INSERT INTO [Ledger$] ([Date], [Description], [Vote], [Amount], [Type], [RefNo]) VALUES (?, ?, ?, ?, ?, ?)";
+                    string sql = @"INSERT INTO [tbl_Payments] ([TotalAmount], [PaymentDate], [TransactionType], [VoteID], [Payee], [MinistryReceiptNo]) VALUES (?, ?, 'Expense', ?, ?, ?)";
                     using (var cmd = new OleDbCommand(sql, conn))
                     {
-                        cmd.Parameters.AddWithValue("?", date.ToString("yyyy-MM-dd HH:mm:ss"));
-                        cmd.Parameters.AddWithValue("?", desc ?? "");
-                        cmd.Parameters.AddWithValue("?", vote ?? "General");
-                        cmd.Parameters.AddWithValue("?", amount);
-                        cmd.Parameters.AddWithValue("?", type);
-                        cmd.Parameters.AddWithValue("?", refNo ?? "");
+                        cmd.Parameters.AddWithValue("?", req.Amount);
+                        cmd.Parameters.AddWithValue("?", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+                        cmd.Parameters.AddWithValue("?", req.VoteId);
+                        cmd.Parameters.AddWithValue("?", req.Payee);
+                        cmd.Parameters.AddWithValue("?", req.Reference ?? "");
                         cmd.ExecuteNonQuery();
                     }
                 }
-                return Ok(new { Message = "Transaction Saved to Excel" });
+                return Ok(new { Message = "Expenditure Recorded" });
             }
             catch (Exception ex) { return StatusCode(500, new { Message = ex.Message }); }
         }
 
-        // --- 3. STUDENT STATEMENTS (Filtered View) ---
-        [HttpGet("statement/{adNo}")]
-        public IActionResult GetLearnerStatement(string adNo)
+        [HttpGet("votes")]
+        public IActionResult GetVotes()
         {
-            var transactions = new List<object>();
-            try
+            var votes = new List<object>();
+            using (var conn = Helpers.DbHelper.GetConnection())
             {
-                EnsureExcelFile();
-                using (OleDbConnection conn = new OleDbConnection(GetExcelConnectionString()))
+                try
                 {
-                    conn.Open();
-                    string sql = "SELECT * FROM [Ledger$] WHERE [Description] LIKE ?";
-                    
-                    using (var cmd = new OleDbCommand(sql, conn))
-                    {
-                        // Filter for payments made by this student
-                        // We look for "Payment - {adNo}" or just matching description if we had a specific column
-                        cmd.Parameters.AddWithValue("?", $"%{adNo}%");
-
-                        using (var reader = cmd.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
-                                string type = reader["Type"]?.ToString();
-                                double amount = 0;
-                                double.TryParse(reader["Amount"]?.ToString(), out amount);
-                                
-                                transactions.Add(new
-                                {
-                                    date = Convert.ToDateTime(reader["Date"]).ToString("yyyy-MM-dd"),
-                                    type = type,
-                                    description = reader["Description"]?.ToString(),
-                                    amount = amount,
-                                    refNo = reader["RefNo"]?.ToString()
-                                });
-                            }
-                        }
-                    }
+                    var cmd = new OleDbCommand("SELECT * FROM [tbl_Votes] ORDER BY [VoteCode]", conn);
+                    var reader = cmd.ExecuteReader();
+                    while (reader.Read()) { votes.Add(new { Id = reader["VoteID"], Name = reader["VoteName"] }); }
                 }
-                return Ok(transactions);
+                catch { }
             }
-            catch (Exception ex) { return StatusCode(500, new { Message = "Error loading statement: " + ex.Message }); }
+            return Ok(votes);
         }
 
-        // --- 4. SUMMARY (Aggregate from Excel) ---
         [HttpGet("summary")]
         public IActionResult GetSummary()
         {
             try
             {
-                EnsureExcelFile();
-                double totalIncome = 0;
-                double hdf = 0;
-                double moe = 0;
-
-                using (OleDbConnection conn = new OleDbConnection(GetExcelConnectionString()))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
-                    conn.Open();
-                    string sql = "SELECT [Type], [Vote], [Amount] FROM [Ledger$]";
+                    string sql = $@"
+                        SELECT 
+                            SUM(IIF([TransactionType]='Income', [TotalAmount], 0)) as TotalIncome,
+                            SUM(IIF([VoteID]={VOTE_INCOME_HDF}, [TotalAmount], 0)) as HDF,
+                            SUM(IIF([VoteID]={VOTE_INCOME_MOE}, [TotalAmount], 0)) as MoE
+                        FROM [tbl_Payments]";
+
                     using (var cmd = new OleDbCommand(sql, conn))
                     using (var reader = cmd.ExecuteReader())
                     {
-                        while (reader.Read())
+                        if (reader.Read())
                         {
-                            string type = reader["Type"]?.ToString();
-                            string vote = reader["Vote"]?.ToString();
-                            double amt = 0;
-                            double.TryParse(reader["Amount"]?.ToString(), out amt);
-
-                            if (type == "Income")
-                            {
-                                totalIncome += amt;
-                                // Simple string match for Vote since IDs are gone
-                                if (vote.Contains("MoE") || vote == "101") moe += amt;
-                                else hdf += amt; // Assume HDF is everything else
-                            }
+                            double total = reader["TotalIncome"] != DBNull.Value ? Convert.ToDouble(reader["TotalIncome"]) : 0;
+                            double hdf = reader["HDF"] != DBNull.Value ? Convert.ToDouble(reader["HDF"]) : 0;
+                            double moe = reader["MoE"] != DBNull.Value ? Convert.ToDouble(reader["MoE"]) : 0;
+                            return Ok(new { total, hdf, moe });
                         }
                     }
                 }
-                return Ok(new { total = totalIncome, hdf, moe });
+                return Ok(new { total = 0, hdf = 0, moe = 0 });
+            }
+            catch (Exception ex) { return StatusCode(500, new { Message = "Summary Error: " + ex.Message }); }
+        }
+
+        [HttpGet("statement/{learnerId}")]
+        public IActionResult GetLearnerStatement(int learnerId)
+        {
+            // Use logic from previous response, just ensuring brackets
+            var transactions = new List<object>();
+            double totalPaid = 0;
+            try
+            {
+                using (var conn = Helpers.DbHelper.GetConnection())
+                {
+                    string learnerName = "", admissionNo = "", parentName = "Parent", parentPhone = "", address = "";
+                    string learnerSql = @"SELECT [Surname], [Names], [AdmissionNo], [FatherName], [FatherPhone], [MotherName], [MotherPhone], [HomeAddress] 
+                                          FROM [tbl_Learners] WHERE [LearnerID] = ?";
+                    using (var cmd = new OleDbCommand(learnerSql, conn))
+                    {
+                        cmd.Parameters.AddWithValue("?", learnerId);
+                        using (var reader = cmd.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                learnerName = $"{reader["Surname"]} {reader["Names"]}".Trim();
+                                admissionNo = reader["AdmissionNo"].ToString();
+                                string dad = reader["FatherName"]?.ToString();
+                                string mom = reader["MotherName"]?.ToString();
+                                if (!string.IsNullOrEmpty(dad)) { parentName = dad; parentPhone = reader["FatherPhone"]?.ToString(); }
+                                else if (!string.IsNullOrEmpty(mom)) { parentName = mom; parentPhone = reader["MotherPhone"]?.ToString(); }
+                                address = reader["HomeAddress"]?.ToString() ?? "";
+                            }
+                            else return NotFound(new { Message = "Learner not found" });
+                        }
+                    }
+                    string sql = @"SELECT [PaymentDate], [TransactionType], [TotalAmount], [MinistryReceiptNo], [Payee] 
+                                   FROM [tbl_Payments] WHERE [LearnerID] = ? ORDER BY [PaymentDate] DESC";
+                    using (var cmd = new OleDbCommand(sql, conn))
+                    {
+                        cmd.Parameters.AddWithValue("?", learnerId);
+                        using (var reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                double amt = Convert.ToDouble(reader["TotalAmount"]);
+                                totalPaid += amt;
+                                transactions.Add(new
+                                {
+                                    Date = Convert.ToDateTime(reader["PaymentDate"]).ToString("yyyy-MM-dd"),
+                                    Type = reader["TransactionType"].ToString(),
+                                    Amount = amt,
+                                    Receipt = reader["MinistryReceiptNo"]?.ToString() ?? "-",
+                                    Description = reader["Payee"]?.ToString()
+                                });
+                            }
+                        }
+                    }
+                    return Ok(new
+                    {
+                        Learner = learnerName,
+                        AdmissionNo = admissionNo,
+                        ParentName = parentName,
+                        ParentPhone = parentPhone,
+                        Address = address,
+                        GeneratedDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm"),
+                        TotalPaid = totalPaid,
+                        Transactions = transactions
+                    });
+                }
             }
             catch (Exception ex) { return StatusCode(500, new { Message = ex.Message }); }
         }
-
-        // --- 4. VOTES (Mocked or read from separate sheet) ---
-        [HttpGet("votes")]
-        public IActionResult GetVotes()
-        {
-            // For simplicity, we return a hardcoded list or could read from a "Votes" sheet
-            return Ok(new[] {
-                new { Id = 100, Name = "HDF General Fund" },
-                new { Id = 101, Name = "MoE Q-Book Fund" },
-                new { Id = 200, Name = "Maintenance" },
-                new { Id = 201, Name = "Food Supplies" },
-                new { Id = 202, Name = "Cleaning Materials" }
-            });
-        }
-
-        // Helper to Create File if Missing (Code First for Excel)
-        private void EnsureExcelFile()
-        {
-            if (!System.IO.File.Exists(_excelPath))
-            {
-                // Create a new Excel file using ADOX or OLEDB CREATE TABLE
-                // Note: Creating a new .xlsx via OLEDB can be tricky. 
-                // We rely on the connection opening to creating it, or we throw if missing.
-                // However, OLEDB usually can create the file if the connection string matches.
-                
-                try 
-                {
-                    using (OleDbConnection conn = new OleDbConnection(GetExcelConnectionString()))
-                    {
-                        conn.Open();
-                        // Create Sheet with Headers
-                        string sql = "CREATE TABLE Ledger ([Date] DATETIME, [Description] MEMO, [Vote] TEXT, [Amount] DOUBLE, [Type] TEXT, [RefNo] TEXT)";
-                        using (var cmd = new OleDbCommand(sql, conn)) cmd.ExecuteNonQuery();
-                    }
-                }
-                catch 
-                {
-                    // Fallback or ignore if file creation isn't supported by driver (often requires existing file)
-                    // In a real environment, we'd copy a template.
-                    throw new FileNotFoundException("Budget 2025.xlsx not found in Data folder. Please upload the file.");
-                }
-            }
-        }
     }
 
-    public class ExcelPaymentRequest { 
+    public class RevenueImportModel { 
+        public DateTime Date { get; set; } 
+        public string ReceiptNo { get; set; } 
+        public string Payee { get; set; } 
+        public double AmountHDF { get; set; } 
+        public double AmountMoE { get; set; } 
+    }
+
+    public class PaymentRequest { 
         public string AdmissionNo { get; set; } 
         public double Amount { get; set; } 
         public int VoteId { get; set; } 

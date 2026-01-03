@@ -1,4 +1,4 @@
-﻿:root {
+:root {
     --primary-dark: #0f172a;
     --accent-blue: #38bdf8;
     --glass-bg: rgba(255, 255, 255, 0.9);
@@ -144,6 +144,12 @@ body, html {
 
     .btn-login:active {
         transform: translateY(0);
+    }
+
+    .btn-login:disabled {
+        background: #94a3b8;
+        cursor: not-allowed;
+        transform: none;
     }
 
 #errorMessage {

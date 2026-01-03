@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using System.Data.OleDb;
 using System.Runtime.Versioning;
 
@@ -9,17 +9,14 @@ namespace HostelManagementSystem.Controllers
     [SupportedOSPlatform("windows")]
     public class StaffController : ControllerBase
     {
-        private readonly string _connString = $@"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={Path.Combine(Directory.GetCurrentDirectory(), "Data", "HostelDb.accdb")};";
-
         [HttpGet("list")]
         public IActionResult GetAllStaff()
         {
             var staffList = new List<object>();
-            using (OleDbConnection conn = new OleDbConnection(_connString))
+            using (var conn = Helpers.DbHelper.GetConnection())
             {
                 string sql = "SELECT [StaffID], [FullName], [JobTitle], [Shift], [ContactNo] FROM [tbl_Staff] ORDER BY [FullName] ASC";
                 OleDbCommand cmd = new OleDbCommand(sql, conn);
-                conn.Open();
                 using (var reader = cmd.ExecuteReader())
                 {
                     while (reader.Read())
@@ -41,7 +38,7 @@ namespace HostelManagementSystem.Controllers
         [HttpPost("add")]
         public IActionResult AddStaff([FromBody] StaffModel staff)
         {
-            using (OleDbConnection conn = new OleDbConnection(_connString))
+            using (var conn = Helpers.DbHelper.GetConnection())
             {
                 string sql = "INSERT INTO [tbl_Staff] ([FullName], [IDNumber], [JobTitle], [Shift], [ContactNo]) VALUES (?, ?, ?, ?, ?)";
                 OleDbCommand cmd = new OleDbCommand(sql, conn);
@@ -50,7 +47,6 @@ namespace HostelManagementSystem.Controllers
                 cmd.Parameters.AddWithValue("?", staff.JobTitle);
                 cmd.Parameters.AddWithValue("?", staff.Shift);
                 cmd.Parameters.AddWithValue("?", staff.ContactNo);
-                conn.Open();
                 cmd.ExecuteNonQuery();
             }
             return Ok(new { Message = "Staff member added successfully" });
@@ -61,12 +57,11 @@ namespace HostelManagementSystem.Controllers
         {
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
                     string sql = "DELETE FROM [tbl_Staff] WHERE [StaffID] = ?";
                     OleDbCommand cmd = new OleDbCommand(sql, conn);
                     cmd.Parameters.AddWithValue("?", id);
-                    conn.Open();
                     cmd.ExecuteNonQuery();
                 }
                 return Ok();

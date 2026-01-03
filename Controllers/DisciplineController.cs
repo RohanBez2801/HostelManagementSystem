@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using System.Data.OleDb;
 using System.Runtime.Versioning;
 using System.Collections.Generic;
@@ -12,12 +12,10 @@ namespace HostelManagementSystem.Controllers
     [SupportedOSPlatform("windows")]
     public class DisciplineController : ControllerBase
     {
-        private readonly string _connString = $@"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={Path.Combine(Directory.GetCurrentDirectory(), "Data", "HostelDb.accdb")};";
-
         [HttpPost("log")]
         public IActionResult LogIncident([FromBody] DisciplineModel report)
         {
-            using (OleDbConnection conn = new OleDbConnection(_connString))
+            using (var conn = Helpers.DbHelper.GetConnection())
             {
                 string sql = "INSERT INTO [tbl_Discipline] ([LearnerID], [IncidentDate], [Description], [Severity], [ReportedBy]) VALUES (?, ?, ?, ?, ?)";
                 OleDbCommand cmd = new OleDbCommand(sql, conn);
@@ -27,7 +25,6 @@ namespace HostelManagementSystem.Controllers
                 cmd.Parameters.AddWithValue("?", report.Severity);
                 cmd.Parameters.AddWithValue("?", report.ReportedBy);
 
-                conn.Open();
                 cmd.ExecuteNonQuery();
             }
             return Ok(new { Message = "Incident logged successfully" });
@@ -37,7 +34,7 @@ namespace HostelManagementSystem.Controllers
         public IActionResult GetHistory(int learnerId)
         {
             var history = new List<object>();
-            using (OleDbConnection conn = new OleDbConnection(_connString))
+            using (var conn = Helpers.DbHelper.GetConnection())
             {
                 // JOIN added to get Parent Contact Info for the report
                 string sql = @"
@@ -50,7 +47,6 @@ namespace HostelManagementSystem.Controllers
 
                 OleDbCommand cmd = new OleDbCommand(sql, conn);
                 cmd.Parameters.AddWithValue("?", learnerId);
-                conn.Open();
                 using (var reader = cmd.ExecuteReader())
                 {
                     while (reader.Read())

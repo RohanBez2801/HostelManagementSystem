@@ -14,8 +14,6 @@ namespace HostelManagementSystem.Controllers
     [SupportedOSPlatform("windows")]
     public class AttendanceController : ControllerBase
     {
-        private readonly string _connString = $@"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={Path.Combine(Directory.GetCurrentDirectory(), "Data", "HostelDb.accdb")};";
-
         // GET: api/attendance/load?date=2025-12-23
         [HttpGet("load")]
         public IActionResult LoadAttendance([FromQuery] DateTime date)
@@ -25,9 +23,8 @@ namespace HostelManagementSystem.Controllers
                 var learners = new List<dynamic>();
                 var attendanceRecords = new Dictionary<int, dynamic>();
 
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
-                    conn.Open();
                     EnsureAttendanceTable(conn);
 
                     // STEP 1: Get All Learners
@@ -119,9 +116,8 @@ namespace HostelManagementSystem.Controllers
         {
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
-                    conn.Open();
                     EnsureAttendanceTable(conn);
 
                     foreach (var item in req.Items)

@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
 using System.Data.OleDb;
@@ -23,7 +23,7 @@ namespace HostelManagementSystem.Controllers
                 using (OleDbConnection conn = new OleDbConnection(_connString))
                 {
                     conn.Open();
-                    EnsureNoticeTable(conn); // Auto-create table
+                    EnsureNoticeTable(conn);
 
                     // FIX: Added brackets [] to handle reserved keywords safely
                     string sql = "SELECT * FROM [tbl_Notices] ORDER BY [DatePosted] DESC";
@@ -58,12 +58,11 @@ namespace HostelManagementSystem.Controllers
                     conn.Open();
                     EnsureNoticeTable(conn);
 
-                    // FIX: "Message" is a reserved word in Access. We must use brackets [Message].
+                    // FIX: "Message" is reserved. Used [Message] to fix 500 Error.
                     string sql = "INSERT INTO [tbl_Notices] ([Message], [Priority], [DatePosted]) VALUES (?, ?, ?)";
 
                     using (var cmd = new OleDbCommand(sql, conn))
                     {
-                        // Parameters must be added in the exact order of the ? placeholders
                         cmd.Parameters.AddWithValue("?", notice.Message);
                         cmd.Parameters.AddWithValue("?", notice.Priority ?? "Normal");
                         cmd.Parameters.AddWithValue("?", DateTime.Now);
@@ -83,7 +82,6 @@ namespace HostelManagementSystem.Controllers
                 using (OleDbConnection conn = new OleDbConnection(_connString))
                 {
                     conn.Open();
-                    // FIX: Added brackets for safety
                     using (var cmd = new OleDbCommand("DELETE FROM [tbl_Notices] WHERE [NoticeID] = ?", conn))
                     {
                         cmd.Parameters.AddWithValue("?", id);
@@ -100,7 +98,6 @@ namespace HostelManagementSystem.Controllers
             var schema = conn.GetSchema("Tables", new string[] { null, null, "tbl_Notices", "TABLE" });
             if (schema.Rows.Count == 0)
             {
-                // FIX: Added brackets to CREATE statement as well
                 string sql = @"CREATE TABLE [tbl_Notices] (
                     [NoticeID] AUTOINCREMENT PRIMARY KEY,
                     [Message] MEMO,

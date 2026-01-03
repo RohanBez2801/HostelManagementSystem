@@ -12,17 +12,14 @@ namespace HostelManagementSystem.Controllers
     [SupportedOSPlatform("windows")]
     public class ParentController : ControllerBase
     {
-        private readonly string _connString = $@"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={Path.Combine(Directory.GetCurrentDirectory(), "Data", "HostelDb.accdb")};";
-
         [HttpGet("all")]
         public IActionResult GetAllParents()
         {
             var parents = new List<object>();
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
-                    conn.Open();
                     EnsureParentTable(conn);
                     string sql = @"SELECT * FROM tbl_Parents ORDER BY ParentName ASC";
 
@@ -53,9 +50,8 @@ namespace HostelManagementSystem.Controllers
             var children = new List<object>();
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
-                    conn.Open();
                     // We need to check if ParentID column exists in tbl_Learners
                     EnsureLearnerParentColumn(conn);
 
@@ -87,9 +83,8 @@ namespace HostelManagementSystem.Controllers
         {
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
-                    conn.Open();
                     EnsureParentTable(conn);
                     string sql = "INSERT INTO tbl_Parents (ParentName, Phone, Email, Address) VALUES (?, ?, ?, ?)";
                     using (var cmd = new OleDbCommand(sql, conn))
@@ -111,9 +106,8 @@ namespace HostelManagementSystem.Controllers
         {
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
-                    conn.Open();
                     EnsureLearnerParentColumn(conn);
                     string sql = "UPDATE tbl_Learners SET ParentID = ? WHERE LearnerID = ?";
                     using (var cmd = new OleDbCommand(sql, conn))

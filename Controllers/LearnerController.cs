@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using System.Data.OleDb;
 using System.Runtime.Versioning;
 using System.Collections.Generic;
@@ -14,8 +14,6 @@ namespace HostelManagementSystem.Controllers
     [SupportedOSPlatform("windows")]
     public class LearnerController : ControllerBase
     {
-        private readonly string _connString = $@"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={Path.Combine(Directory.GetCurrentDirectory(), "Data", "HostelDb.accdb")};";
-
         // --- 1. THE ROBUST DATABASE FIXER ---
         [HttpGet("fix-db")]
         public IActionResult FixDatabase()
@@ -23,10 +21,8 @@ namespace HostelManagementSystem.Controllers
             var log = new List<string>();
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
-                    conn.Open();
-
                     // A. Ensure Columns Exist (Extended List)
                     var columns = new Dictionary<string, string> {
                         // Basic
@@ -47,16 +43,16 @@ namespace HostelManagementSystem.Controllers
                         { "Sib4Name", "TEXT(100)" }, { "Sib4Grade", "TEXT(20)" },
 
                         // Father
-                        { "FatherName", "TEXT(100)" }, { "FatherID", "TEXT(50)" },
+                        { "FatherName", "TEXT(100)" }, { "FatherID", "TEXT(50)" }, 
                         { "FatherOccupation", "TEXT(100)" }, { "FatherEmployer", "TEXT(100)" },
-                        { "FatherHomePhone", "TEXT(50)" }, { "FatherWorkPhone", "TEXT(50)" }, { "FatherCell", "TEXT(50)" },
+                        { "FatherHomePhone", "TEXT(50)" }, { "FatherWorkPhone", "TEXT(50)" }, { "FatherCell", "TEXT(50)" }, 
                         { "FatherFax", "TEXT(50)" }, { "FatherEmail", "TEXT(100)" },
                         { "FatherResAddress", "MEMO" }, { "FatherPostalAddress", "MEMO" },
 
                         // Mother
-                        { "MotherName", "TEXT(100)" }, { "MotherID", "TEXT(50)" },
+                        { "MotherName", "TEXT(100)" }, { "MotherID", "TEXT(50)" }, 
                         { "MotherOccupation", "TEXT(100)" }, { "MotherEmployer", "TEXT(100)" },
-                        { "MotherHomePhone", "TEXT(50)" }, { "MotherWorkPhone", "TEXT(50)" }, { "MotherCell", "TEXT(50)" },
+                        { "MotherHomePhone", "TEXT(50)" }, { "MotherWorkPhone", "TEXT(50)" }, { "MotherCell", "TEXT(50)" }, 
                         { "MotherFax", "TEXT(50)" }, { "MotherEmail", "TEXT(100)" },
                         { "MotherResAddress", "MEMO" }, { "MotherPostalAddress", "MEMO" },
 
@@ -136,9 +132,8 @@ namespace HostelManagementSystem.Controllers
         {
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
-                    conn.Open();
                     string sql = "SELECT * FROM [tbl_Learners] WHERE [LearnerID] = ?";
                     using (var cmd = new OleDbCommand(sql, conn))
                     {
@@ -171,7 +166,7 @@ namespace HostelManagementSystem.Controllers
                                     Religion = S("Religion"),
                                     LearnerCell = S("LearnerCell"),
                                     HomeAddress = S("HomeAddress"),
-
+                                    
                                     // Academic
                                     PrevSchool = S("PrevSchool"),
                                     PrevHostel = S("PrevHostel"),
@@ -180,88 +175,51 @@ namespace HostelManagementSystem.Controllers
                                     GradesRepeated = S("GradesRepeated"),
 
                                     // Siblings
-                                    Sib1Name = S("Sib1Name"),
-                                    Sib1Grade = S("Sib1Grade"),
-                                    Sib2Name = S("Sib2Name"),
-                                    Sib2Grade = S("Sib2Grade"),
-                                    Sib3Name = S("Sib3Name"),
-                                    Sib3Grade = S("Sib3Grade"),
-                                    Sib4Name = S("Sib4Name"),
-                                    Sib4Grade = S("Sib4Grade"),
+                                    Sib1Name = S("Sib1Name"), Sib1Grade = S("Sib1Grade"),
+                                    Sib2Name = S("Sib2Name"), Sib2Grade = S("Sib2Grade"),
+                                    Sib3Name = S("Sib3Name"), Sib3Grade = S("Sib3Grade"),
+                                    Sib4Name = S("Sib4Name"), Sib4Grade = S("Sib4Grade"),
 
                                     // Father
-                                    FatherName = S("FatherName"),
-                                    FatherID = S("FatherID"),
-                                    FatherOccupation = S("FatherOccupation"),
-                                    FatherEmployer = S("FatherEmployer"),
-                                    FatherHomePhone = S("FatherHomePhone"),
-                                    FatherWorkPhone = S("FatherWorkPhone"),
-                                    FatherCell = S("FatherCell"),
-                                    FatherFax = S("FatherFax"),
-                                    FatherEmail = S("FatherEmail"),
-                                    FatherResAddress = S("FatherResAddress"),
+                                    FatherName = S("FatherName"), FatherID = S("FatherID"),
+                                    FatherOccupation = S("FatherOccupation"), FatherEmployer = S("FatherEmployer"),
+                                    FatherHomePhone = S("FatherHomePhone"), FatherWorkPhone = S("FatherWorkPhone"),
+                                    FatherCell = S("FatherCell"), FatherFax = S("FatherFax"),
+                                    FatherEmail = S("FatherEmail"), FatherResAddress = S("FatherResAddress"),
                                     FatherPostalAddress = S("FatherPostalAddress"),
 
                                     // Mother
-                                    MotherName = S("MotherName"),
-                                    MotherID = S("MotherID"),
-                                    MotherOccupation = S("MotherOccupation"),
-                                    MotherEmployer = S("MotherEmployer"),
-                                    MotherHomePhone = S("MotherHomePhone"),
-                                    MotherWorkPhone = S("MotherWorkPhone"),
-                                    MotherCell = S("MotherCell"),
-                                    MotherFax = S("MotherFax"),
-                                    MotherEmail = S("MotherEmail"),
-                                    MotherResAddress = S("MotherResAddress"),
+                                    MotherName = S("MotherName"), MotherID = S("MotherID"),
+                                    MotherOccupation = S("MotherOccupation"), MotherEmployer = S("MotherEmployer"),
+                                    MotherHomePhone = S("MotherHomePhone"), MotherWorkPhone = S("MotherWorkPhone"),
+                                    MotherCell = S("MotherCell"), MotherFax = S("MotherFax"),
+                                    MotherEmail = S("MotherEmail"), MotherResAddress = S("MotherResAddress"),
                                     MotherPostalAddress = S("MotherPostalAddress"),
 
                                     // Relatives
-                                    Rel1Name = S("Rel1Name"),
-                                    Rel1ID = S("Rel1ID"),
-                                    Rel1Tel = S("Rel1Tel"),
-                                    Rel2Name = S("Rel2Name"),
-                                    Rel2ID = S("Rel2ID"),
-                                    Rel2Tel = S("Rel2Tel"),
-                                    Rel3Name = S("Rel3Name"),
-                                    Rel3ID = S("Rel3ID"),
-                                    Rel3Tel = S("Rel3Tel"),
-                                    Rel4Name = S("Rel4Name"),
-                                    Rel4ID = S("Rel4ID"),
-                                    Rel4Tel = S("Rel4Tel"),
-                                    Rel5Name = S("Rel5Name"),
-                                    Rel5ID = S("Rel5ID"),
-                                    Rel5Tel = S("Rel5Tel"),
-                                    Rel6Name = S("Rel6Name"),
-                                    Rel6ID = S("Rel6ID"),
-                                    Rel6Tel = S("Rel6Tel"),
+                                    Rel1Name = S("Rel1Name"), Rel1ID = S("Rel1ID"), Rel1Tel = S("Rel1Tel"),
+                                    Rel2Name = S("Rel2Name"), Rel2ID = S("Rel2ID"), Rel2Tel = S("Rel2Tel"),
+                                    Rel3Name = S("Rel3Name"), Rel3ID = S("Rel3ID"), Rel3Tel = S("Rel3Tel"),
+                                    Rel4Name = S("Rel4Name"), Rel4ID = S("Rel4ID"), Rel4Tel = S("Rel4Tel"),
+                                    Rel5Name = S("Rel5Name"), Rel5ID = S("Rel5ID"), Rel5Tel = S("Rel5Tel"),
+                                    Rel6Name = S("Rel6Name"), Rel6ID = S("Rel6ID"), Rel6Tel = S("Rel6Tel"),
 
                                     // Medical
-                                    MedicalAidName = S("MedicalAidName"),
-                                    MedicalAidNo = S("MedicalAidNo"),
+                                    MedicalAidName = S("MedicalAidName"), MedicalAidNo = S("MedicalAidNo"),
                                     MedicalMainMember = S("MedicalMainMember"),
-                                    AmbChoice1 = S("AmbChoice1"),
-                                    AmbChoice2 = S("AmbChoice2"),
-                                    HospChoice1 = S("HospChoice1"),
-                                    HospChoice2 = S("HospChoice2"),
-                                    BloodGroup = S("BloodGroup"),
-                                    ChronicMedication = S("ChronicMedication"),
+                                    AmbChoice1 = S("AmbChoice1"), AmbChoice2 = S("AmbChoice2"),
+                                    HospChoice1 = S("HospChoice1"), HospChoice2 = S("HospChoice2"),
+                                    BloodGroup = S("BloodGroup"), ChronicMedication = S("ChronicMedication"),
                                     MedicalHistory = S("MedicalHistory"),
-                                    DoctorName = S("DoctorName"),
-                                    DoctorTel = S("DoctorTel"),
-                                    DoctorDeclaredFit = B("DoctorDeclaredFit"),
-                                    DoctorDate = D("DoctorDate"),
+                                    DoctorName = S("DoctorName"), DoctorTel = S("DoctorTel"),
+                                    DoctorDeclaredFit = B("DoctorDeclaredFit"), DoctorDate = D("DoctorDate"),
 
                                     // Docs
-                                    DocPassportPhoto = B("DocPassportPhoto"),
-                                    DocBirthCert = B("DocBirthCert"),
-                                    DocReportJune = B("DocReportJune"),
-                                    DocReportDec = B("DocReportDec"),
-                                    DocParentsID = B("DocParentsID"),
-                                    DocMunicipal = B("DocMunicipal"),
-                                    DocEmployer = B("DocEmployer"),
-                                    DocDoctorDecl = B("DocDoctorDecl"),
-                                    DocProofAccept = B("DocProofAccept"),
-                                    DocStudyPermit = B("DocStudyPermit")
+                                    DocPassportPhoto = B("DocPassportPhoto"), DocBirthCert = B("DocBirthCert"),
+                                    DocReportJune = B("DocReportJune"), DocReportDec = B("DocReportDec"),
+                                    DocParentsID = B("DocParentsID"), DocMunicipal = B("DocMunicipal"),
+                                    DocEmployer = B("DocEmployer"), DocDoctorDecl = B("DocDoctorDecl"),
+                                    DocProofAccept = B("DocProofAccept"), DocStudyPermit = B("DocStudyPermit")
                                 };
                                 return Ok(data);
                             }
@@ -281,9 +239,8 @@ namespace HostelManagementSystem.Controllers
             var list = new List<object>();
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
-                    conn.Open();
                     // UPDATED SQL: Joins Blocks and sorts hierarchically
                     string sql = @"
                         SELECT L.[LearnerID], L.[AdmissionNo], L.[Surname], L.[Names], L.[FullName], 
@@ -346,10 +303,8 @@ namespace HostelManagementSystem.Controllers
             // But we will add the basics + room assignment.
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
-                    conn.Open();
-
                     string surname = req.Surname ?? "";
                     string names = req.Names ?? "";
                     string fullName = $"{surname} {names}".Trim();
@@ -392,9 +347,8 @@ namespace HostelManagementSystem.Controllers
         {
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
-                    conn.Open();
                     int roomId = -1;
                     using (OleDbCommand cmdFind = new OleDbCommand("SELECT [RoomID] FROM [tbl_Learners] WHERE [LearnerID] = ?", conn))
                     {
@@ -429,10 +383,8 @@ namespace HostelManagementSystem.Controllers
         {
             try
             {
-                using (OleDbConnection conn = new OleDbConnection(_connString))
+                using (var conn = Helpers.DbHelper.GetConnection())
                 {
-                    conn.Open();
-
                     string fullName = $"{r.Surname} {r.Names}".Trim();
 
                     string sql = @"UPDATE [tbl_Learners] SET 
@@ -464,24 +416,24 @@ namespace HostelManagementSystem.Controllers
                         S(r.AdmissionNo); S(r.Surname); S(r.Names); S(fullName); S(r.Gender); P(r.RoomId); P(r.DOB); P(r.Grade);
                         S(r.HomeLanguage); S(r.PreferredName); S(r.PlaceOfBirth); S(r.Citizenship); S(r.StudyPermitNo); S(r.Religion); S(r.LearnerCell); S(r.HomeAddress);
                         S(r.PrevSchool); S(r.PrevHostel); S(r.RefTeacher); S(r.RefTeacherCell); S(r.GradesRepeated);
-
+                        
                         S(r.Sib1Name); S(r.Sib1Grade); S(r.Sib2Name); S(r.Sib2Grade); S(r.Sib3Name); S(r.Sib3Grade); S(r.Sib4Name); S(r.Sib4Grade);
-
+                        
                         S(r.FatherName); S(r.FatherID); S(r.FatherOccupation); S(r.FatherEmployer); S(r.FatherHomePhone); S(r.FatherWorkPhone); S(r.FatherCell); S(r.FatherFax); S(r.FatherEmail); S(r.FatherResAddress); S(r.FatherPostalAddress);
                         S(r.MotherName); S(r.MotherID); S(r.MotherOccupation); S(r.MotherEmployer); S(r.MotherHomePhone); S(r.MotherWorkPhone); S(r.MotherCell); S(r.MotherFax); S(r.MotherEmail); S(r.MotherResAddress); S(r.MotherPostalAddress);
-
+                        
                         S(r.Rel1Name); S(r.Rel1ID); S(r.Rel1Tel);
                         S(r.Rel2Name); S(r.Rel2ID); S(r.Rel2Tel);
                         S(r.Rel3Name); S(r.Rel3ID); S(r.Rel3Tel);
                         S(r.Rel4Name); S(r.Rel4ID); S(r.Rel4Tel);
                         S(r.Rel5Name); S(r.Rel5ID); S(r.Rel5Tel);
                         S(r.Rel6Name); S(r.Rel6ID); S(r.Rel6Tel);
-
+                        
                         S(r.MedicalAidName); S(r.MedicalAidNo); S(r.MedicalMainMember);
                         S(r.AmbChoice1); S(r.AmbChoice2); S(r.HospChoice1); S(r.HospChoice2);
                         S(r.BloodGroup); S(r.ChronicMedication); S(r.MedicalHistory);
                         S(r.DoctorName); S(r.DoctorTel); P(r.DoctorDeclaredFit); P(r.DoctorDate);
-
+                        
                         P(r.DocPassportPhoto); P(r.DocBirthCert); P(r.DocReportJune); P(r.DocReportDec); P(r.DocParentsID);
                         P(r.DocMunicipal); P(r.DocEmployer); P(r.DocDoctorDecl); P(r.DocProofAccept); P(r.DocStudyPermit);
 
@@ -515,23 +467,19 @@ namespace HostelManagementSystem.Controllers
         public string Religion { get; set; }
         public string LearnerCell { get; set; }
         public string HomeAddress { get; set; }
-
+        
         // Academic
         public string PrevSchool { get; set; }
         public string PrevHostel { get; set; }
         public string RefTeacher { get; set; }
         public string RefTeacherCell { get; set; }
         public string GradesRepeated { get; set; }
-
+        
         // Siblings
-        public string Sib1Name { get; set; }
-        public string Sib1Grade { get; set; }
-        public string Sib2Name { get; set; }
-        public string Sib2Grade { get; set; }
-        public string Sib3Name { get; set; }
-        public string Sib3Grade { get; set; }
-        public string Sib4Name { get; set; }
-        public string Sib4Grade { get; set; }
+        public string Sib1Name { get; set; } public string Sib1Grade { get; set; }
+        public string Sib2Name { get; set; } public string Sib2Grade { get; set; }
+        public string Sib3Name { get; set; } public string Sib3Grade { get; set; }
+        public string Sib4Name { get; set; } public string Sib4Grade { get; set; }
 
         // Father
         public string FatherName { get; set; }
@@ -560,24 +508,12 @@ namespace HostelManagementSystem.Controllers
         public string MotherPostalAddress { get; set; }
 
         // Relatives
-        public string Rel1Name { get; set; }
-        public string Rel1ID { get; set; }
-        public string Rel1Tel { get; set; }
-        public string Rel2Name { get; set; }
-        public string Rel2ID { get; set; }
-        public string Rel2Tel { get; set; }
-        public string Rel3Name { get; set; }
-        public string Rel3ID { get; set; }
-        public string Rel3Tel { get; set; }
-        public string Rel4Name { get; set; }
-        public string Rel4ID { get; set; }
-        public string Rel4Tel { get; set; }
-        public string Rel5Name { get; set; }
-        public string Rel5ID { get; set; }
-        public string Rel5Tel { get; set; }
-        public string Rel6Name { get; set; }
-        public string Rel6ID { get; set; }
-        public string Rel6Tel { get; set; }
+        public string Rel1Name { get; set; } public string Rel1ID { get; set; } public string Rel1Tel { get; set; }
+        public string Rel2Name { get; set; } public string Rel2ID { get; set; } public string Rel2Tel { get; set; }
+        public string Rel3Name { get; set; } public string Rel3ID { get; set; } public string Rel3Tel { get; set; }
+        public string Rel4Name { get; set; } public string Rel4ID { get; set; } public string Rel4Tel { get; set; }
+        public string Rel5Name { get; set; } public string Rel5ID { get; set; } public string Rel5Tel { get; set; }
+        public string Rel6Name { get; set; } public string Rel6ID { get; set; } public string Rel6Tel { get; set; }
 
         // Medical
         public string MedicalAidName { get; set; }

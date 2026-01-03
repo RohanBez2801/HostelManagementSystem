@@ -25,25 +25,38 @@
         // --- RBAC ENFORCEMENT ---
         // If user is NOT an Administrator, hide sensitive sections
         if (role !== 'Administrator') {
+
+            // 1. Hide Sidebar Links
             const restrictedNavs = ['financialsLink', 'settingsLink', 'reportsLink', 'lbl-admin', 'staffLink'];
             restrictedNavs.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.style.display = 'none';
             });
 
+            // 2. Hide Dashboard Financial Card (TARGET PARENT ELEMENT)
+            // We use a CSS trick to hide the 4th stat card specifically if it's the financial one
             const finCard = document.getElementById('statTotalCollected');
             if (finCard) {
+                // Traverse up to find the .stat-card wrapper and hide it
+                // structure: .stat-card > .stat-value(id)
                 finCard.closest('.stat-card').style.display = 'none';
             }
 
+            // 3. Hide Sensitive Action Buttons (Static HTML)
             const restrictedButtons = [
-                'action-payment', 'btn-add-room', 'btn-add-staff', 'btn-quick-learner', 'btn-reg-learner'
+                'action-payment',       // Post Payment
+                'btn-add-room',         // Add New Room (Header)
+                'btn-add-staff',        // Add Staff
+                'btn-quick-learner',    // Quick: New Learner
+                'btn-reg-learner'       // Learners View: Register
             ];
             restrictedButtons.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.style.display = 'none';
             });
 
+            // 4. Force Hide Dynamic Elements via CSS Injection
+            // This catches elements created by other JS files (like rooms.js New Block button)
             const style = document.createElement('style');
             style.innerHTML = `
                 button[onclick="openAddBlockModal()"] { display: none !important; }
@@ -54,17 +67,19 @@
     });
 })();
 
-// Helper: Check if user is Admin
+// Helper: Check if user is Admin (used by other scripts)
 function isAdmin() {
     return sessionStorage.getItem('userRole') === 'Administrator';
 }
 
 // --- 2. NAVIGATION LOGIC ---
 function showView(viewId, element) {
+    // Hide all sections
     document.querySelectorAll('.view-section').forEach(v => {
         v.style.display = 'none';
     });
 
+    // Show target section
     const target = document.getElementById('view-' + viewId);
     if (target) {
         target.style.display = 'block';
@@ -72,9 +87,11 @@ function showView(viewId, element) {
         console.error("Target section NOT found:", 'view-' + viewId);
     }
 
+    // Update Title
     const titleEl = document.getElementById('viewTitle');
     if (titleEl) titleEl.innerText = viewId.replace(/-/g, ' ').toUpperCase();
 
+    // Update Sidebar Active State
     if (element) {
         document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
         element.classList.add('active');
@@ -116,15 +133,6 @@ function showView(viewId, element) {
         case 'inventory':
             if (typeof loadInventory === 'function') loadInventory();
             break;
-        case 'dining':
-            if (typeof loadDiningLog === 'function') loadDiningLog();
-            break;
-        case 'communication':
-            if (typeof loadCommunicationLog === 'function') loadCommunicationLog();
-            break;
-        case 'events':
-            if (typeof loadEvents === 'function') loadEvents();
-            break;
     }
 }
 
@@ -132,53 +140,46 @@ function showView(viewId, element) {
 async function updateStats() {
     try {
         const res = await fetch('/api/Dashboard/stats');
-        
-        // Robustness: Check if response is valid JSON
-        const contentType = res.headers.get("content-type");
-        if (!res.ok || !contentType || !contentType.includes("application/json")) {
-            throw new Error("Invalid API Response");
-        }
-
         const stats = await res.json();
 
-        // 1. Capacity
+        // 1. Capacity & Availability
         const elCap = document.getElementById('statCap');
         const elAvail = document.getElementById('statAvail');
-        if (elCap) elCap.innerText = stats.totalCapacity || 0;
-        if (elAvail) elAvail.innerText = (stats.totalCapacity || 0) - (stats.totalStudents || 0);
+        if (elCap) elCap.innerText = stats.totalCapacity;
+        if (elAvail) elAvail.innerText = stats.totalCapacity - (Math.round(stats.totalCapacity * (stats.occupancyRate / 100)) || 0); // Approx based on rate if needed, or calc exact if API sends occupied count.
+        // Actually API sends TotalCapacity and OccupancyRate.
+        // Let's rely on what we have or better yet, let's keep it simple.
+        // The API returns TotalCapacity. We can calculate available if we had occupied.
+        // Wait, the API returns OccupancyRate, TotalStudents.
+        // Available = TotalCapacity - (OccupancyRate/100 * TotalCapacity)? No, TotalStudents is simpler.
+        if (elAvail) elAvail.innerText = stats.totalCapacity - stats.totalStudents; // Assuming 1 student = 1 bed
+
 
         // 2. Maintenance
         const elIssues = document.getElementById('openIssuesCount');
-        if (elIssues) elIssues.innerText = stats.pendingMaintenance || 0;
+        if (elIssues) elIssues.innerText = stats.pendingMaintenance;
 
-        // 3. Low Stock
+        // 3. New Stats
         const elStock = document.getElementById('statLowStock');
-        if (elStock) elStock.innerText = stats.lowStockItems || 0;
-        
-        // 4. License Status (New Tile)
-        const elLic = document.getElementById('statLicense');
-        if (elLic) {
-            const status = stats.licenseStatus || "Unknown";
-            const days = stats.licenseDaysLeft || 0;
-            if (status === 'Active') {
-                elLic.innerHTML = `<span style="color:#10b981; font-weight:bold;"><i class="fas fa-check-circle"></i> Active (${days} days)</span>`;
-            } else {
-                elLic.innerHTML = `<span style="color:#ef4444; font-weight:bold;"><i class="fas fa-exclamation-triangle"></i> ${status}</span>`;
-            }
-        }
+        if (elStock) elStock.innerText = stats.lowStockItems;
 
-        // 5. Financials (Admin Only)
+        // 4. Financials (Still fetch separately as it might have specific security/logic)
         if (isAdmin()) {
             try {
                 const finRes = await fetch('/api/Financials/summary');
-                if (finRes.ok) {
-                    const finData = await finRes.json();
-                    const currency = typeof getCurrency === 'function' ? getCurrency() : "N$";
-                    const total = finData.total || finData.TotalIncome || 0;
-                    const elFin = document.getElementById('statTotalCollected');
-                    if (elFin) elFin.innerText = `${currency} ${total.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
-                }
+                const finData = await finRes.json();
+
+                const currency = typeof getCurrency === 'function' ? getCurrency() : "N$";
+                const total = finData.total || finData.TotalIncome || 0;
+
+                const elFin = document.getElementById('statTotalCollected');
+                if (elFin) elFin.innerText = `${currency} ${total.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
             } catch (e) { console.warn("Financial stats failed", e); }
+        } else {
+            const elFin = document.getElementById('statTotalCollected');
+            if (elFin && elFin.closest('.stat-card')) {
+                elFin.closest('.stat-card').style.display = 'none';
+            }
         }
 
     } catch (err) { console.error("Stats Error:", err); }
@@ -187,14 +188,13 @@ async function updateStats() {
 // --- 4. GLOBAL SEARCH ---
 async function globalSearch(term) {
     if (term.length < 2) {
-        document.getElementById('search-results-dropdown')?.remove();
+        const existing = document.getElementById('search-results-dropdown');
+        if (existing) existing.remove();
         return;
     }
 
     try {
         const res = await fetch('/api/learner/list-all');
-        if(!res.ok) return; 
-        
         const data = await res.json();
         const learners = Array.isArray(data) ? data : (data.value || []);
 
@@ -231,6 +231,7 @@ function displaySearchResults(results) {
 function jumpToLearner(id) {
     document.getElementById('search-results-dropdown')?.remove();
     document.querySelector('.search-box input').value = "";
+
     const learnersNav = document.querySelector('[onclick*="showView(\'learners\'"]');
     if (learnersNav) showView('learners', learnersNav);
 }
@@ -250,26 +251,12 @@ function logout() {
     }
 }
 
-// Global Modal Helper (Used by Reports etc)
-function openModalContent(html) {
-    let existing = document.getElementById('dynamicModal');
-    if (existing) existing.remove();
-
-    const modal = document.createElement('div');
-    modal.id = 'dynamicModal';
-    modal.className = 'modal-overlay';
-    modal.style.display = 'flex';
-    modal.innerHTML = `
-        <div class="modal-content" style="max-width:800px; width:90%; max-height:90vh; overflow-y:auto;">
-            ${html}
-        </div>
-    `;
-    document.body.appendChild(modal);
-    
-    // Close on click outside
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) modal.remove();
-    });
-}
+// Enable keyboard navigation for role="button" elements
+document.addEventListener('keydown', function(e) {
+    if (e.target.getAttribute('role') === 'button' && (e.key === 'Enter' || e.key === ' ')) {
+        e.preventDefault();
+        e.target.click();
+    }
+});
 
 startClock();
