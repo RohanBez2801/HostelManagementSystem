@@ -1,49 +1,67 @@
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Data.OleDb;
+using HostelManagementSystem.Helpers;
+using System.Runtime.Versioning;
 
 namespace HostelManagementSystem.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    [SupportedOSPlatform("windows")]
     public class AuthController : ControllerBase
     {
         [HttpPost("login")]
         public IActionResult Login([FromBody] LoginRequest request)
         {
-            using (var conn = Helpers.DbHelper.GetConnection())
+            if (request == null || string.IsNullOrEmpty(request.Username) || string.IsNullOrEmpty(request.Password))
+                return BadRequest("Invalid request.");
+
+            try
             {
-                // 1. Username first (?), Password second (?)
-                string sql = "SELECT [UserID], [UserRole], [FullName] FROM [tbl_Users] WHERE [Username] = ? AND [Password] = ?";
-
-                using (OleDbCommand cmd = new OleDbCommand(sql, conn))
+                // FIX 1: Use the centralized connection from DbHelper
+                using (var conn = DbHelper.GetConnection())
                 {
-                    // 2. MUST ADD IN THIS EXACT ORDER
-                    cmd.Parameters.AddWithValue("?", request.Username); // Matches 1st ?
-                    cmd.Parameters.AddWithValue("?", request.Password); // Matches 2nd ?
+                    conn.Open();
 
-                    using (var reader = cmd.ExecuteReader())
+                    // FIX 2: Added brackets [] around reserved words [Password] and table name [tbl_Users]
+                    // This prevents the "Syntax Error" crash in Access.
+                    string sql = "SELECT [UserID], [UserRole], [FullName] FROM [tbl_Users] WHERE [Username] = ? AND [Password] = ?";
+
+                    using (var cmd = new OleDbCommand(sql, conn))
                     {
-                        if (reader.Read())
+                        cmd.Parameters.AddWithValue("?", request.Username);
+                        cmd.Parameters.AddWithValue("?", request.Password); // Note: In production, hash this!
+
+                        using (var reader = cmd.ExecuteReader())
                         {
-                            return Ok(new
+                            if (reader.Read())
                             {
-                                UserId = reader["UserID"],
-                                Role = reader["UserRole"].ToString(),
-                                UserName = reader["FullName"].ToString()
-                            });
+                                // Login Success
+                                return Ok(new
+                                {
+                                    UserId = reader["UserID"],
+                                    Role = reader["UserRole"].ToString(),
+                                    UserName = reader["FullName"].ToString()
+                                });
+                            }
                         }
                     }
                 }
+                return Unauthorized(new { Message = "Invalid username or password" });
             }
-            return Unauthorized(new { Message = "Invalid credentials" });
+            catch (Exception ex)
+            {
+                // Log the actual error to help debugging
+                return StatusCode(500, new { Message = "Database Error: " + ex.Message });
+            }
         }
     }
 
+    // This model ensures the JSON body { "username": "...", "password": "..." } is read correctly
     public class LoginRequest
     {
-        public string Username { get; set; } = string.Empty;
-        public string Password { get; set; } = string.Empty;
+        public string Username { get; set; }
+        public string Password { get; set; }
     }
 }

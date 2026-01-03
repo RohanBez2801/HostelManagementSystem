@@ -251,6 +251,43 @@ function logout() {
     }
 }
 
+// --- LICENSE MANAGEMENT ---
+async function activateLicense() {
+    const input = document.getElementById('licenseKeyInput');
+    const key = input.value.trim();
+
+    if (!key) return alert("Please enter a license key.");
+
+    const btn = document.querySelector('button[onclick="activateLicense()"]');
+    const originalText = btn.innerText;
+    btn.innerText = "Verifying...";
+    btn.disabled = true;
+
+    try {
+        const res = await fetch('/api/License/activate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ Key: key })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            alert("Success! " + data.message + "\nType: " + data.type);
+            input.value = "";
+            if (typeof updateStats === 'function') updateStats(); // Refresh dashboard badge
+        } else {
+            alert("Activation Failed: " + (data.message || "Invalid Key"));
+        }
+    } catch (err) {
+        alert("Connection Error. Please try again.");
+    } finally {
+        btn.innerText = originalText;
+        btn.disabled = false;
+    }
+}
+
+
 // Enable keyboard navigation for role="button" elements
 document.addEventListener('keydown', function(e) {
     if (e.target.getAttribute('role') === 'button' && (e.key === 'Enter' || e.key === ' ')) {

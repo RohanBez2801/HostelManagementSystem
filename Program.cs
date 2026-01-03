@@ -1,9 +1,14 @@
+using HostelManagementSystem.Helpers;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // 1. Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(); // This enables Swagger generation
+builder.Services.AddSwaggerGen();
+
+// Register Encoding Provider for Access DB (Vital for OLEDB)
+System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
 
 var app = builder.Build();
 
@@ -11,14 +16,15 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI(); // This enables the interactive UI at /swagger
+    app.UseSwaggerUI();
 }
 
-app.UseDefaultFiles(); // Important: Looks for login.html or index.html
-app.UseStaticFiles();  // Important: Serves files from wwwroot
+app.UseDefaultFiles(); // Serves index.html by default
+app.UseStaticFiles();  // Serves wwwroot content
 
-app.UseHttpsRedirection();
-app.UseAuthorization();
 app.MapControllers();
+
+// 3. Initialize Database (Run the "Doctor")
+DbHelper.InitializeDatabase();
 
 app.Run();
