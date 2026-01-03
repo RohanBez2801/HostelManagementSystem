@@ -185,26 +185,49 @@ async function updateStats() {
 }
 
 // --- 4. GLOBAL SEARCH ---
+let searchCache = { data: null, timestamp: 0 };
+let searchDebounceTimer;
+
 async function globalSearch(term) {
+    clearTimeout(searchDebounceTimer);
+
     if (term.length < 2) {
         document.getElementById('search-results-dropdown')?.remove();
         return;
     }
 
-    try {
-        const res = await fetch('/api/learner/list-all');
-        if(!res.ok) return; 
-        
-        const data = await res.json();
-        const learners = Array.isArray(data) ? data : (data.value || []);
+    // Debounce: Wait 300ms before processing
+    searchDebounceTimer = setTimeout(async () => {
+        try {
+            console.time("Search Duration");
+            let learners = [];
 
-        const filtered = learners.filter(s =>
-            (s.name || '').toLowerCase().includes(term.toLowerCase()) ||
-            (s.adNo || '').toLowerCase().includes(term.toLowerCase())
-        );
+            // Cache Strategy: Use cache if < 60 seconds old
+            const now = Date.now();
+            if (searchCache.data && (now - searchCache.timestamp < 60000)) {
+                learners = searchCache.data;
+                console.log("Search: Cache Hit");
+            } else {
+                console.log("Search: Fetching from Server...");
+                const res = await fetch('/api/learner/list-all');
+                if(!res.ok) return;
 
-        displaySearchResults(filtered);
-    } catch (err) { console.error("Search Error:", err); }
+                const data = await res.json();
+                learners = Array.isArray(data) ? data : (data.value || []);
+
+                // Update Cache
+                searchCache = { data: learners, timestamp: now };
+            }
+
+            const filtered = learners.filter(s =>
+                (s.name || '').toLowerCase().includes(term.toLowerCase()) ||
+                (s.adNo || '').toLowerCase().includes(term.toLowerCase())
+            );
+
+            displaySearchResults(filtered);
+            console.timeEnd("Search Duration");
+        } catch (err) { console.error("Search Error:", err); }
+    }, 300);
 }
 
 function displaySearchResults(results) {
