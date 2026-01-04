@@ -186,25 +186,42 @@ async function updateStats() {
 }
 
 // --- 4. GLOBAL SEARCH ---
+let searchTimeout = null;
+let searchCache = null;
+let searchCacheTime = 0;
+const CACHE_TTL = 60000; // 60 seconds
+
 async function globalSearch(term) {
+    if (searchTimeout) clearTimeout(searchTimeout);
+
     if (term.length < 2) {
-        const existing = document.getElementById('search-results-dropdown');
-        if (existing) existing.remove();
+        document.getElementById('search-results-dropdown')?.remove();
         return;
     }
 
-    try {
-        const res = await fetch('/api/learner/list-all');
-        const data = await res.json();
-        const learners = Array.isArray(data) ? data : (data.value || []);
+    // Debounce: Wait 300ms before searching
+    searchTimeout = setTimeout(async () => {
+        try {
+            // Cache Strategy: Use local data if fresh
+            const now = Date.now();
+            if (!searchCache || (now - searchCacheTime > CACHE_TTL)) {
+                // Fetch fresh data
+                const res = await fetch('/api/learner/list-all');
+                const data = await res.json();
+                searchCache = Array.isArray(data) ? data : (data.value || []);
+                searchCacheTime = now;
+            }
 
-        const filtered = learners.filter(s =>
-            (s.name || '').toLowerCase().includes(term.toLowerCase()) ||
-            (s.adNo || '').toLowerCase().includes(term.toLowerCase())
-        );
+            const learners = searchCache;
 
-        displaySearchResults(filtered);
-    } catch (err) { console.error("Search Error:", err); }
+            const filtered = learners.filter(s =>
+                (s.name || '').toLowerCase().includes(term.toLowerCase()) ||
+                (s.adNo || '').toLowerCase().includes(term.toLowerCase())
+            );
+
+            displaySearchResults(filtered);
+        } catch (err) { console.error("Search Error:", err); }
+    }, 300);
 }
 
 function displaySearchResults(results) {
