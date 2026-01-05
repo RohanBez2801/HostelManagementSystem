@@ -18,14 +18,16 @@ async function loadLearners() {
         const userRole = sessionStorage.getItem('userRole') || 'Staff';
         const isAdmin = userRole === 'Administrator';
 
-        tbody.innerHTML = learners.map(s => {
+        // Optimized rendering using DocumentFragment
+        const fragment = document.createDocumentFragment();
+
+        learners.forEach(s => {
             let genderIcon = '<i class="fas fa-question" style="color:#ccc"></i>';
             if ((s.gender || "").toLowerCase() === 'male') genderIcon = '<i class="fas fa-mars" style="color:#2563eb"></i> Male';
             if ((s.gender || "").toLowerCase() === 'female') genderIcon = '<i class="fas fa-venus" style="color:#db2777"></i> Female';
 
-            // IMPORTANT: Name click triggers viewLearnerDetails
-            return `
-            <tr>
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
                 <td><span style="font-family:monospace; color:#64748b;">${s.adNo}</span></td>
                 <td><a href="#" onclick="viewLearnerDetails(${s.id}); return false;" style="font-weight:bold; color:#0f172a; text-decoration:none; border-bottom:1px dashed #cbd5e1;">${s.name}</a></td>
                 <td>${genderIcon}</td> 
@@ -37,9 +39,12 @@ async function loadLearners() {
                         <button class="btn-icon" title="Statement" onclick="viewStatement(${s.id}, '${s.name}')"><i class="fas fa-file-invoice-dollar"></i></button>
                     ` : ''}
                 </td>
-            </tr>
             `;
-        }).join('');
+            fragment.appendChild(tr);
+        });
+
+        tbody.innerHTML = ''; // Clear existing
+        tbody.appendChild(fragment);
     } catch (err) {
         console.error("Failed to load learners:", err);
         tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:red">Error: ${err.message}</td></tr>`;

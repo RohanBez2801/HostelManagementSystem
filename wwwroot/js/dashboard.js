@@ -186,6 +186,10 @@ async function updateStats() {
 }
 
 // --- 4. GLOBAL SEARCH ---
+let learnerCache = null;
+let lastSearchFetch = 0;
+const CACHE_TTL = 60000; // 60 seconds
+
 async function globalSearch(term) {
     if (term.length < 2) {
         const existing = document.getElementById('search-results-dropdown');
@@ -194,9 +198,22 @@ async function globalSearch(term) {
     }
 
     try {
-        const res = await fetch('/api/learner/list-all');
-        const data = await res.json();
-        const learners = Array.isArray(data) ? data : (data.value || []);
+        const now = Date.now();
+        let learners = [];
+
+        // Check Cache
+        if (learnerCache && (now - lastSearchFetch < CACHE_TTL)) {
+            learners = learnerCache;
+        } else {
+            // Fetch Fresh
+            const res = await fetch('/api/learner/list-all');
+            const data = await res.json();
+            learners = Array.isArray(data) ? data : (data.value || []);
+
+            // Update Cache
+            learnerCache = learners;
+            lastSearchFetch = now;
+        }
 
         const filtered = learners.filter(s =>
             (s.name || '').toLowerCase().includes(term.toLowerCase()) ||
