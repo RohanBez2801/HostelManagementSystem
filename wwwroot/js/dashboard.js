@@ -186,6 +186,11 @@ async function updateStats() {
 }
 
 // --- 4. GLOBAL SEARCH ---
+// ⚡ Bolt Optimization: Cache & Debounce to reduce server load
+let searchCache = null;
+let lastSearchFetch = 0;
+let searchDebounceTimer = null;
+
 async function globalSearch(term) {
     if (term.length < 2) {
         const existing = document.getElementById('search-results-dropdown');
@@ -193,18 +198,29 @@ async function globalSearch(term) {
         return;
     }
 
-    try {
-        const res = await fetch('/api/learner/list-all');
-        const data = await res.json();
-        const learners = Array.isArray(data) ? data : (data.value || []);
+    // Debounce: Wait 300ms before processing
+    if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
 
-        const filtered = learners.filter(s =>
-            (s.name || '').toLowerCase().includes(term.toLowerCase()) ||
-            (s.adNo || '').toLowerCase().includes(term.toLowerCase())
-        );
+    searchDebounceTimer = setTimeout(async () => {
+        try {
+            // Cache Strategy: Reuse data for 60 seconds
+            const now = Date.now();
+            if (!searchCache || (now - lastSearchFetch > 60000)) {
+                const res = await fetch('/api/learner/list-all');
+                const data = await res.json();
+                searchCache = Array.isArray(data) ? data : (data.value || []);
+                lastSearchFetch = now;
+            }
 
-        displaySearchResults(filtered);
-    } catch (err) { console.error("Search Error:", err); }
+            const learners = searchCache;
+            const filtered = learners.filter(s =>
+                (s.name || '').toLowerCase().includes(term.toLowerCase()) ||
+                (s.adNo || '').toLowerCase().includes(term.toLowerCase())
+            );
+
+            displaySearchResults(filtered);
+        } catch (err) { console.error("Search Error:", err); }
+    }, 300);
 }
 
 function displaySearchResults(results) {
