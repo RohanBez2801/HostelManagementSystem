@@ -186,25 +186,48 @@ async function updateStats() {
 }
 
 // --- 4. GLOBAL SEARCH ---
+let searchTimer = null;
+let searchCache = null;
+let lastCacheTime = 0;
+const CACHE_DURATION = 60000; // 60 seconds
+
 async function globalSearch(term) {
+    clearTimeout(searchTimer);
+
     if (term.length < 2) {
         const existing = document.getElementById('search-results-dropdown');
         if (existing) existing.remove();
         return;
     }
 
-    try {
-        const res = await fetch('/api/learner/list-all');
-        const data = await res.json();
-        const learners = Array.isArray(data) ? data : (data.value || []);
+    // Debounce: Wait 300ms before searching
+    searchTimer = setTimeout(async () => {
+        try {
+            let learners;
+            const now = Date.now();
 
-        const filtered = learners.filter(s =>
-            (s.name || '').toLowerCase().includes(term.toLowerCase()) ||
-            (s.adNo || '').toLowerCase().includes(term.toLowerCase())
-        );
+            // Cache: Use cached data if valid (< 60s)
+            if (searchCache && (now - lastCacheTime < CACHE_DURATION)) {
+                learners = searchCache;
+            } else {
+                const res = await fetch('/api/learner/list-all');
+                if (!res.ok) throw new Error("Fetch failed");
+                const data = await res.json();
+                learners = Array.isArray(data) ? data : (data.value || []);
 
-        displaySearchResults(filtered);
-    } catch (err) { console.error("Search Error:", err); }
+                // Update Cache
+                searchCache = learners;
+                lastCacheTime = now;
+            }
+
+            const filtered = learners.filter(s =>
+                (s.name || '').toLowerCase().includes(term.toLowerCase()) ||
+                (s.adNo || '').toLowerCase().includes(term.toLowerCase())
+            );
+
+            displaySearchResults(filtered);
+        } catch (err) { console.error("Search Error:", err); }
+    }, 300);
 }
 
 function displaySearchResults(results) {
