@@ -254,18 +254,31 @@ namespace HostelManagementSystem.Controllers
                     using (OleDbCommand cmd = new OleDbCommand(sql, conn))
                     using (var reader = cmd.ExecuteReader())
                     {
+                        // ⚡ Bolt Optimization: Cache column ordinals to avoid repeated string lookups in loop
+                        // This changes complexity from O(Rows * Cols * StringLength) to O(Rows * Cols)
+                        int ordId = reader.GetOrdinal("LearnerID");
+                        int ordAdNo = reader.GetOrdinal("AdmissionNo");
+                        int ordSurname = reader.GetOrdinal("Surname");
+                        int ordNames = reader.GetOrdinal("Names");
+                        int ordFull = reader.GetOrdinal("FullName");
+                        int ordGrade = reader.GetOrdinal("Grade");
+                        int ordGender = reader.GetOrdinal("Gender");
+                        int ordRoomId = reader.GetOrdinal("RoomID");
+                        int ordRoomNum = reader.GetOrdinal("RoomNumber");
+                        int ordBlock = reader.GetOrdinal("BlockName");
+
                         while (reader.Read())
                         {
                             // Name Construction
-                            string sName = reader["Surname"]?.ToString() ?? "";
-                            string fName = reader["Names"]?.ToString() ?? "";
-                            string dbFull = reader["FullName"]?.ToString();
+                            string sName = reader.GetValue(ordSurname)?.ToString() ?? "";
+                            string fName = reader.GetValue(ordNames)?.ToString() ?? "";
+                            string dbFull = reader.GetValue(ordFull)?.ToString();
                             string displayName = !string.IsNullOrWhiteSpace(dbFull) ? dbFull : $"{sName} {fName}".Trim();
                             if (string.IsNullOrWhiteSpace(displayName)) displayName = "Unknown";
 
                             // Room Construction (Block - Room)
-                            string rNum = reader["RoomNumber"]?.ToString();
-                            string bName = reader["BlockName"]?.ToString();
+                            string rNum = reader.GetValue(ordRoomNum)?.ToString();
+                            string bName = reader.GetValue(ordBlock)?.ToString();
                             string displayRoom = "Unassigned";
 
                             if (!string.IsNullOrEmpty(rNum))
@@ -276,14 +289,14 @@ namespace HostelManagementSystem.Controllers
 
                             list.Add(new
                             {
-                                id = reader["LearnerID"],
-                                adNo = reader["AdmissionNo"]?.ToString() ?? "N/A",
+                                id = reader.GetValue(ordId),
+                                adNo = reader.GetValue(ordAdNo)?.ToString() ?? "N/A",
                                 name = displayName,
                                 surname = sName,
                                 names = fName,
-                                grade = reader["Grade"]?.ToString() ?? "-",
-                                gender = reader["Gender"]?.ToString() ?? "-",
-                                roomId = reader["RoomID"] != DBNull.Value ? reader["RoomID"] : 0,
+                                grade = reader.GetValue(ordGrade)?.ToString() ?? "-",
+                                gender = reader.GetValue(ordGender)?.ToString() ?? "-",
+                                roomId = !reader.IsDBNull(ordRoomId) ? reader.GetValue(ordRoomId) : 0,
                                 room = displayRoom // Sends "Block A - 101" to frontend
                             });
                         }
