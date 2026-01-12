@@ -186,25 +186,39 @@ async function updateStats() {
 }
 
 // --- 4. GLOBAL SEARCH ---
+let searchDebounce;
+let searchCache = null;
+let searchCacheTime = 0;
+
 async function globalSearch(term) {
+    clearTimeout(searchDebounce);
+
     if (term.length < 2) {
         const existing = document.getElementById('search-results-dropdown');
         if (existing) existing.remove();
         return;
     }
 
-    try {
-        const res = await fetch('/api/learner/list-all');
-        const data = await res.json();
-        const learners = Array.isArray(data) ? data : (data.value || []);
+    // Debounce to prevent API flooding (300ms delay)
+    searchDebounce = setTimeout(async () => {
+        try {
+            // Check cache (valid for 60 seconds)
+            const now = Date.now();
+            if (!searchCache || (now - searchCacheTime > 60000)) {
+                const res = await fetch('/api/learner/list-all');
+                const data = await res.json();
+                searchCache = Array.isArray(data) ? data : (data.value || []);
+                searchCacheTime = now;
+            }
 
-        const filtered = learners.filter(s =>
-            (s.name || '').toLowerCase().includes(term.toLowerCase()) ||
-            (s.adNo || '').toLowerCase().includes(term.toLowerCase())
-        );
+            const filtered = searchCache.filter(s =>
+                (s.name || '').toLowerCase().includes(term.toLowerCase()) ||
+                (s.adNo || '').toLowerCase().includes(term.toLowerCase())
+            );
 
-        displaySearchResults(filtered);
-    } catch (err) { console.error("Search Error:", err); }
+            displaySearchResults(filtered);
+        } catch (err) { console.error("Search Error:", err); }
+    }, 300);
 }
 
 function displaySearchResults(results) {
