@@ -186,25 +186,53 @@ async function updateStats() {
 }
 
 // --- 4. GLOBAL SEARCH ---
+let searchDebounceTimer = null;
+const searchCache = {
+    data: null,
+    timestamp: 0,
+    TTL: 60000 // 60 seconds
+};
+
 async function globalSearch(term) {
+    // Clear pending search (Debounce)
+    if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+
     if (term.length < 2) {
         const existing = document.getElementById('search-results-dropdown');
         if (existing) existing.remove();
         return;
     }
 
-    try {
-        const res = await fetch('/api/learner/list-all');
-        const data = await res.json();
-        const learners = Array.isArray(data) ? data : (data.value || []);
+    // Schedule new search
+    searchDebounceTimer = setTimeout(async () => {
+        try {
+            let learners = [];
+            const now = Date.now();
 
-        const filtered = learners.filter(s =>
-            (s.name || '').toLowerCase().includes(term.toLowerCase()) ||
-            (s.adNo || '').toLowerCase().includes(term.toLowerCase())
-        );
+            // Use Cache if Valid
+            if (searchCache.data && (now - searchCache.timestamp < searchCache.TTL)) {
+                learners = searchCache.data;
+            } else {
+                // Fetch Fresh Data
+                const res = await fetch('/api/learner/list-all');
+                if (!res.ok) throw new Error(`API Error: ${res.status}`);
 
-        displaySearchResults(filtered);
-    } catch (err) { console.error("Search Error:", err); }
+                const data = await res.json();
+                learners = Array.isArray(data) ? data : (data.value || []);
+
+                // Update Cache
+                searchCache.data = learners;
+                searchCache.timestamp = now;
+            }
+
+            const filtered = learners.filter(s =>
+                (s.name || '').toLowerCase().includes(term.toLowerCase()) ||
+                (s.adNo || '').toLowerCase().includes(term.toLowerCase())
+            );
+
+            displaySearchResults(filtered);
+        } catch (err) { console.error("Search Error:", err); }
+    }, 300); // 300ms Delay
 }
 
 function displaySearchResults(results) {
