@@ -186,7 +186,20 @@ async function updateStats() {
 }
 
 // --- 4. GLOBAL SEARCH ---
-async function globalSearch(term) {
+let searchDebounceTimer;
+let searchCache = null;
+let searchCacheTime = 0;
+
+function globalSearch(term) {
+    clearTimeout(searchDebounceTimer);
+
+    // Performance: Debounce input to reduce API calls
+    searchDebounceTimer = setTimeout(() => {
+        performGlobalSearch(term);
+    }, 300);
+}
+
+async function performGlobalSearch(term) {
     if (term.length < 2) {
         const existing = document.getElementById('search-results-dropdown');
         if (existing) existing.remove();
@@ -194,11 +207,16 @@ async function globalSearch(term) {
     }
 
     try {
-        const res = await fetch('/api/learner/list-all');
-        const data = await res.json();
-        const learners = Array.isArray(data) ? data : (data.value || []);
+        // Performance: Cache learner list for 60 seconds
+        const now = Date.now();
+        if (!searchCache || (now - searchCacheTime > 60000)) {
+            const res = await fetch('/api/learner/list-all');
+            const data = await res.json();
+            searchCache = Array.isArray(data) ? data : (data.value || []);
+            searchCacheTime = now;
+        }
 
-        const filtered = learners.filter(s =>
+        const filtered = searchCache.filter(s =>
             (s.name || '').toLowerCase().includes(term.toLowerCase()) ||
             (s.adNo || '').toLowerCase().includes(term.toLowerCase())
         );
