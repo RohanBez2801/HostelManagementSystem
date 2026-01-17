@@ -186,25 +186,47 @@ async function updateStats() {
 }
 
 // --- 4. GLOBAL SEARCH ---
+let searchTimeout;
+let searchCache = null;
+let searchCacheTime = 0;
+const CACHE_DURATION = 60000; // 60 seconds
+
 async function globalSearch(term) {
+    if (searchTimeout) clearTimeout(searchTimeout);
+
     if (term.length < 2) {
         const existing = document.getElementById('search-results-dropdown');
         if (existing) existing.remove();
         return;
     }
 
-    try {
-        const res = await fetch('/api/learner/list-all');
-        const data = await res.json();
-        const learners = Array.isArray(data) ? data : (data.value || []);
+    // Debounce: 300ms delay before fetching
+    searchTimeout = setTimeout(async () => {
+        try {
+            let learners = [];
+            const now = Date.now();
 
-        const filtered = learners.filter(s =>
-            (s.name || '').toLowerCase().includes(term.toLowerCase()) ||
-            (s.adNo || '').toLowerCase().includes(term.toLowerCase())
-        );
+            // Optimization: Use Client-Side Cache
+            if (searchCache && (now - searchCacheTime < CACHE_DURATION)) {
+                learners = searchCache;
+            } else {
+                const res = await fetch('/api/learner/list-all');
+                const data = await res.json();
+                learners = Array.isArray(data) ? data : (data.value || []);
 
-        displaySearchResults(filtered);
-    } catch (err) { console.error("Search Error:", err); }
+                // Update Cache
+                searchCache = learners;
+                searchCacheTime = now;
+            }
+
+            const filtered = learners.filter(s =>
+                (s.name || '').toLowerCase().includes(term.toLowerCase()) ||
+                (s.adNo || '').toLowerCase().includes(term.toLowerCase())
+            );
+
+            displaySearchResults(filtered);
+        } catch (err) { console.error("Search Error:", err); }
+    }, 300);
 }
 
 function displaySearchResults(results) {
