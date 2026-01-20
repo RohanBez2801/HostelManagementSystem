@@ -254,18 +254,31 @@ namespace HostelManagementSystem.Controllers
                     using (OleDbCommand cmd = new OleDbCommand(sql, conn))
                     using (var reader = cmd.ExecuteReader())
                     {
+                        // ⚡ Bolt Optimization: Cache column ordinals to avoid string lookups in loop
+                        int ordLearnerID = reader.GetOrdinal("LearnerID");
+                        int ordAdmissionNo = reader.GetOrdinal("AdmissionNo");
+                        int ordSurname = reader.GetOrdinal("Surname");
+                        int ordNames = reader.GetOrdinal("Names");
+                        int ordFullName = reader.GetOrdinal("FullName");
+                        int ordGrade = reader.GetOrdinal("Grade");
+                        int ordGender = reader.GetOrdinal("Gender");
+                        int ordRoomID = reader.GetOrdinal("RoomID");
+                        int ordRoomNumber = reader.GetOrdinal("RoomNumber");
+                        int ordBlockName = reader.GetOrdinal("BlockName");
+
                         while (reader.Read())
                         {
                             // Name Construction
-                            string sName = reader["Surname"]?.ToString() ?? "";
-                            string fName = reader["Names"]?.ToString() ?? "";
-                            string dbFull = reader["FullName"]?.ToString();
+                            string sName = !reader.IsDBNull(ordSurname) ? reader.GetString(ordSurname) : "";
+                            string fName = !reader.IsDBNull(ordNames) ? reader.GetString(ordNames) : "";
+                            string dbFull = !reader.IsDBNull(ordFullName) ? reader.GetString(ordFullName) : null;
+
                             string displayName = !string.IsNullOrWhiteSpace(dbFull) ? dbFull : $"{sName} {fName}".Trim();
                             if (string.IsNullOrWhiteSpace(displayName)) displayName = "Unknown";
 
                             // Room Construction (Block - Room)
-                            string rNum = reader["RoomNumber"]?.ToString();
-                            string bName = reader["BlockName"]?.ToString();
+                            string rNum = !reader.IsDBNull(ordRoomNumber) ? reader.GetString(ordRoomNumber) : null;
+                            string bName = !reader.IsDBNull(ordBlockName) ? reader.GetString(ordBlockName) : null;
                             string displayRoom = "Unassigned";
 
                             if (!string.IsNullOrEmpty(rNum))
@@ -274,16 +287,22 @@ namespace HostelManagementSystem.Controllers
                                 displayRoom = !string.IsNullOrEmpty(bName) ? $"{bName} - {rNum}" : rNum;
                             }
 
+                            // Safe Grade Reading (could be int or string depending on DB schema, usually int but safer to ToString)
+                            string gradeStr = !reader.IsDBNull(ordGrade) ? reader[ordGrade].ToString() : "-";
+
+                            // Safe ID Reading
+                            int idVal = reader.GetInt32(ordLearnerID);
+
                             list.Add(new
                             {
-                                id = reader["LearnerID"],
-                                adNo = reader["AdmissionNo"]?.ToString() ?? "N/A",
+                                id = idVal,
+                                adNo = !reader.IsDBNull(ordAdmissionNo) ? reader.GetString(ordAdmissionNo) : "N/A",
                                 name = displayName,
                                 surname = sName,
                                 names = fName,
-                                grade = reader["Grade"]?.ToString() ?? "-",
-                                gender = reader["Gender"]?.ToString() ?? "-",
-                                roomId = reader["RoomID"] != DBNull.Value ? reader["RoomID"] : 0,
+                                grade = gradeStr,
+                                gender = !reader.IsDBNull(ordGender) ? reader.GetString(ordGender) : "-",
+                                roomId = !reader.IsDBNull(ordRoomID) ? reader[ordRoomID] : 0, // Keep object for JSON serialization if needed, or cast to int
                                 room = displayRoom // Sends "Block A - 101" to frontend
                             });
                         }
