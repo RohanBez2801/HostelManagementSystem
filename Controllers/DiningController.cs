@@ -25,16 +25,24 @@ namespace HostelManagementSystem.Controllers
                     using (var cmd = new OleDbCommand(sql, conn))
                     using (var reader = cmd.ExecuteReader())
                     {
+                        // ⚡ Bolt: Cache ordinals to avoid repeated string lookups inside the loop
+                        int ordId = reader.GetOrdinal("ID");
+                        int ordSupplier = reader.GetOrdinal("Supplier");
+                        int ordItem = reader.GetOrdinal("Item");
+                        int ordQuantity = reader.GetOrdinal("Quantity");
+                        int ordReceivedBy = reader.GetOrdinal("ReceivedBy");
+                        int ordDate = reader.GetOrdinal("DateLogged");
+
                         while (reader.Read())
                         {
                             logs.Add(new
                             {
-                                Id = reader["ID"],
-                                Supplier = reader["Supplier"].ToString(),
-                                Item = reader["Item"].ToString(),
-                                Quantity = reader["Quantity"].ToString(),
-                                ReceivedBy = reader["ReceivedBy"].ToString(),
-                                Date = Convert.ToDateTime(reader["DateLogged"]).ToString("yyyy-MM-dd HH:mm")
+                                Id = reader.GetValue(ordId),
+                                Supplier = reader.IsDBNull(ordSupplier) ? string.Empty : reader.GetValue(ordSupplier).ToString(),
+                                Item = reader.IsDBNull(ordItem) ? string.Empty : reader.GetValue(ordItem).ToString(),
+                                Quantity = reader.IsDBNull(ordQuantity) ? string.Empty : reader.GetValue(ordQuantity).ToString(),
+                                ReceivedBy = reader.IsDBNull(ordReceivedBy) ? string.Empty : reader.GetValue(ordReceivedBy).ToString(),
+                                Date = reader.IsDBNull(ordDate) ? string.Empty : reader.GetDateTime(ordDate).ToString("yyyy-MM-dd HH:mm")
                             });
                         }
                     }
