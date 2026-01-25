@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Data.OleDb;
 using System.Runtime.Versioning;
 using System.IO;
-
 namespace HostelManagementSystem.Controllers
 {
     [ApiController]
@@ -28,17 +27,26 @@ namespace HostelManagementSystem.Controllers
                     using (var cmd = new OleDbCommand(sql, conn))
                     using (var reader = cmd.ExecuteReader())
                     {
+                        // Performance: Cache column ordinals outside the loop to avoid O(n) lookups
+                        int idOrd = reader.GetOrdinal("ID");
+                        int typeOrd = reader.GetOrdinal("MsgType");
+                        int recipientOrd = reader.GetOrdinal("Recipient");
+                        int subjectOrd = reader.GetOrdinal("Subject");
+                        int bodyOrd = reader.GetOrdinal("Body");
+                        int statusOrd = reader.GetOrdinal("Status");
+                        int dateOrd = reader.GetOrdinal("DateSent");
+
                         while (reader.Read())
                         {
                             logs.Add(new
                             {
-                                Id = reader["ID"],
-                                Type = reader["MsgType"].ToString(),
-                                Recipient = reader["Recipient"].ToString(),
-                                Subject = reader["Subject"].ToString(),
-                                Body = reader["Body"].ToString(),
-                                Status = reader["Status"].ToString(),
-                                Date = Convert.ToDateTime(reader["DateSent"]).ToString("yyyy-MM-dd HH:mm")
+                                Id = reader.GetValue(idOrd),
+                                Type = reader.GetValue(typeOrd).ToString(),
+                                Recipient = reader.GetValue(recipientOrd).ToString(),
+                                Subject = reader.GetValue(subjectOrd).ToString(),
+                                Body = reader.GetValue(bodyOrd).ToString(),
+                                Status = reader.GetValue(statusOrd).ToString(),
+                                Date = Convert.ToDateTime(reader.GetValue(dateOrd)).ToString("yyyy-MM-dd HH:mm")
                             });
                         }
                     }
