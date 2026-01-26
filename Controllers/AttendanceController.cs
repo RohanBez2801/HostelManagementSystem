@@ -38,15 +38,23 @@ namespace HostelManagementSystem.Controllers
                     using (var cmd = new OleDbCommand(sqlLearners, conn))
                     using (var reader = cmd.ExecuteReader())
                     {
+                        // Optimization: Cache column ordinals to avoid string lookups in loop
+                        int ordLearnerID = reader.GetOrdinal("LearnerID");
+                        int ordAdmissionNo = reader.GetOrdinal("AdmissionNo");
+                        int ordSurname = reader.GetOrdinal("Surname");
+                        int ordNames = reader.GetOrdinal("Names");
+                        int ordGrade = reader.GetOrdinal("Grade");
+                        int ordRoomNumber = reader.GetOrdinal("RoomNumber");
+
                         while (reader.Read())
                         {
                             learners.Add(new
                             {
-                                Id = Convert.ToInt32(reader["LearnerID"]),
-                                AdNo = reader["AdmissionNo"]?.ToString(),
-                                Name = $"{reader["Surname"]} {reader["Names"]}",
-                                Grade = reader["Grade"]?.ToString(),
-                                Room = reader["RoomNumber"]?.ToString() ?? "Unassigned"
+                                Id = reader.GetInt32(ordLearnerID),
+                                AdNo = reader.IsDBNull(ordAdmissionNo) ? "" : reader.GetValue(ordAdmissionNo).ToString(),
+                                Name = $"{(reader.IsDBNull(ordSurname) ? "" : reader.GetValue(ordSurname).ToString())} {(reader.IsDBNull(ordNames) ? "" : reader.GetValue(ordNames).ToString())}",
+                                Grade = reader.IsDBNull(ordGrade) ? "" : reader.GetValue(ordGrade).ToString(),
+                                Room = reader.IsDBNull(ordRoomNumber) ? "Unassigned" : reader.GetValue(ordRoomNumber).ToString()
                             });
                         }
                     }
@@ -60,15 +68,20 @@ namespace HostelManagementSystem.Controllers
 
                         using (var reader = cmd.ExecuteReader())
                         {
+                            // Optimization: Cache column ordinals
+                            int ordLearnerID = reader.GetOrdinal("LearnerID");
+                            int ordStatus = reader.GetOrdinal("Status");
+                            int ordRemarks = reader.GetOrdinal("Remarks");
+
                             while (reader.Read())
                             {
-                                int lId = Convert.ToInt32(reader["LearnerID"]);
+                                int lId = reader.GetInt32(ordLearnerID);
                                 if (!attendanceRecords.ContainsKey(lId))
                                 {
                                     attendanceRecords.Add(lId, new
                                     {
-                                        Status = reader["Status"]?.ToString(),
-                                        Remarks = reader["Remarks"]?.ToString()
+                                        Status = reader.IsDBNull(ordStatus) ? "" : reader.GetValue(ordStatus).ToString(),
+                                        Remarks = reader.IsDBNull(ordRemarks) ? "" : reader.GetValue(ordRemarks).ToString()
                                     });
                                 }
                             }
