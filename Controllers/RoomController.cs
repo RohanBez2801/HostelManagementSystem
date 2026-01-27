@@ -25,17 +25,30 @@ namespace HostelManagementSystem.Controllers
                         FROM tbl_Rooms r LEFT JOIN tbl_Blocks b ON r.BlockID = b.BlockID ORDER BY r.RoomNumber ASC";
                     using (var cmd = new OleDbCommand(sql, conn)) using (var reader = cmd.ExecuteReader())
                     {
+                        // Optimization: Cache ordinals to avoid string-based lookups in loop
+                        int ordRoomID = reader.GetOrdinal("RoomID");
+                        int ordRoomNumber = reader.GetOrdinal("RoomNumber");
+                        int ordBlockName = reader.GetOrdinal("BlockName");
+                        int ordBlockGender = reader.GetOrdinal("BlockGender");
+                        int ordCapacity = reader.GetOrdinal("Capacity");
+                        int ordRealOccupancy = reader.GetOrdinal("RealOccupancy");
+
                         while (reader.Read())
                         {
+                            // Use Convert.ToInt32(GetValue) for robust casting (e.g. Int16/Byte -> Int32)
+                            int capacity = Convert.ToInt32(reader.GetValue(ordCapacity));
+                            int occupied = Convert.ToInt32(reader.GetValue(ordRealOccupancy));
+
                             rooms.Add(new
                             {
-                                Id = reader["RoomID"],
-                                Number = reader["RoomNumber"]?.ToString(),
-                                Block = reader["BlockName"]?.ToString(),
-                                BlockGender = reader["BlockGender"]?.ToString() ?? "Mixed",
-                                Capacity = reader["Capacity"],
-                                Occupied = reader["RealOccupancy"],
-                                Available = Convert.ToInt32(reader["Capacity"]) - Convert.ToInt32(reader["RealOccupancy"])
+                                Id = reader.GetValue(ordRoomID),
+                                // Use GetValue().ToString() to handle both string and numeric types safely
+                                Number = reader.IsDBNull(ordRoomNumber) ? "" : reader.GetValue(ordRoomNumber).ToString(),
+                                Block = reader.IsDBNull(ordBlockName) ? "" : reader.GetValue(ordBlockName).ToString(),
+                                BlockGender = reader.IsDBNull(ordBlockGender) ? "Mixed" : reader.GetValue(ordBlockGender).ToString(),
+                                Capacity = capacity,
+                                Occupied = occupied,
+                                Available = capacity - occupied
                             });
                         }
                     }
@@ -58,18 +71,27 @@ namespace HostelManagementSystem.Controllers
                         FROM tbl_Rooms r LEFT JOIN tbl_Blocks b ON r.BlockID = b.BlockID ORDER BY r.RoomNumber ASC";
                     using (var cmd = new OleDbCommand(sql, conn)) using (var reader = cmd.ExecuteReader())
                     {
+                        // Optimization: Cache ordinals to avoid string-based lookups in loop
+                        int ordRoomID = reader.GetOrdinal("RoomID");
+                        int ordRoomNumber = reader.GetOrdinal("RoomNumber");
+                        int ordBlockName = reader.GetOrdinal("BlockName");
+                        int ordBlockGender = reader.GetOrdinal("BlockGender");
+                        int ordCapacity = reader.GetOrdinal("Capacity");
+                        int ordRealOccupancy = reader.GetOrdinal("RealOccupancy");
+
                         while (reader.Read())
                         {
-                            int cap = Convert.ToInt32(reader["Capacity"]);
-                            int occ = Convert.ToInt32(reader["RealOccupancy"]);
+                            int cap = Convert.ToInt32(reader.GetValue(ordCapacity));
+                            int occ = Convert.ToInt32(reader.GetValue(ordRealOccupancy));
+
                             if (occ < cap)
                             {
                                 rooms.Add(new
                                 {
-                                    Id = reader["RoomID"],
-                                    Number = reader["RoomNumber"]?.ToString(),
-                                    Block = reader["BlockName"]?.ToString(),
-                                    BlockGender = reader["BlockGender"]?.ToString() ?? "Mixed",
+                                    Id = reader.GetValue(ordRoomID),
+                                    Number = reader.IsDBNull(ordRoomNumber) ? "" : reader.GetValue(ordRoomNumber).ToString(),
+                                    Block = reader.IsDBNull(ordBlockName) ? "" : reader.GetValue(ordBlockName).ToString(),
+                                    BlockGender = reader.IsDBNull(ordBlockGender) ? "Mixed" : reader.GetValue(ordBlockGender).ToString(),
                                     Available = cap - occ
                                 });
                             }
@@ -92,9 +114,18 @@ namespace HostelManagementSystem.Controllers
                     string sql = "SELECT BlockID, BlockName, BlockGender FROM tbl_Blocks ORDER BY BlockName ASC";
                     using (var cmd = new OleDbCommand(sql, conn)) using (var reader = cmd.ExecuteReader())
                     {
+                        // Optimization: Cache ordinals to avoid string-based lookups in loop
+                        int ordBlockID = reader.GetOrdinal("BlockID");
+                        int ordBlockName = reader.GetOrdinal("BlockName");
+                        int ordBlockGender = reader.GetOrdinal("BlockGender");
+
                         while (reader.Read())
                         {
-                            blocks.Add(new { BlockID = reader["BlockID"], BlockName = reader["BlockName"], BlockGender = reader["BlockGender"] });
+                            blocks.Add(new {
+                                BlockID = reader.GetValue(ordBlockID),
+                                BlockName = reader.IsDBNull(ordBlockName) ? "" : reader.GetValue(ordBlockName).ToString(),
+                                BlockGender = reader.IsDBNull(ordBlockGender) ? "Mixed" : reader.GetValue(ordBlockGender).ToString()
+                            });
                         }
                     }
                 }
@@ -161,17 +192,23 @@ namespace HostelManagementSystem.Controllers
 
                     using (var reader = cmd.ExecuteReader())
                     {
+                        // Optimization: Cache ordinals to avoid string-based lookups in loop
+                        int ordLearnerID = reader.GetOrdinal("LearnerID");
+                        int ordSurname = reader.GetOrdinal("Surname");
+                        int ordNames = reader.GetOrdinal("Names");
+                        int ordGrade = reader.GetOrdinal("Grade");
+
                         while (reader.Read())
                         {
-                            string sName = reader["Surname"]?.ToString() ?? "";
-                            string fName = reader["Names"]?.ToString() ?? "";
+                            string sName = reader.IsDBNull(ordSurname) ? "" : reader.GetValue(ordSurname).ToString();
+                            string fName = reader.IsDBNull(ordNames) ? "" : reader.GetValue(ordNames).ToString();
 
                             occupants.Add(new
                             {
-                                LearnerID = reader["LearnerID"],
+                                LearnerID = reader.GetValue(ordLearnerID),
                                 Name = fName,
                                 Surname = sName,
-                                Grade = reader["Grade"]?.ToString() ?? "-"
+                                Grade = reader.IsDBNull(ordGrade) ? "-" : reader.GetValue(ordGrade).ToString()
                             });
                         }
                     }
