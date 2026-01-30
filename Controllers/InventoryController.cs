@@ -30,16 +30,24 @@ namespace HostelManagementSystem.Controllers
                     using (var cmd = new OleDbCommand(sql, conn))
                     using (var reader = cmd.ExecuteReader())
                     {
+                        // ⚡ Bolt: Cache ordinals to avoid repeated string lookups (Performance Optimization)
+                        int ordId = reader.GetOrdinal("InventoryID");
+                        int ordName = reader.GetOrdinal("ItemName");
+                        int ordCategory = reader.GetOrdinal("Category");
+                        int ordQuantity = reader.GetOrdinal("Quantity");
+                        int ordCondition = reader.GetOrdinal("Condition");
+                        int ordRoom = reader.GetOrdinal("RoomNumber");
+
                         while (reader.Read())
                         {
                             items.Add(new
                             {
-                                Id = reader["InventoryID"],
-                                Name = reader["ItemName"]?.ToString(),
-                                Category = reader["Category"]?.ToString(),
-                                Quantity = reader["Quantity"],
-                                Condition = reader["Condition"]?.ToString(),
-                                Room = reader["RoomNumber"]?.ToString() ?? "General Store"
+                                Id = Convert.ToInt32(reader.GetValue(ordId)),
+                                Name = reader.IsDBNull(ordName) ? "" : reader.GetValue(ordName).ToString(),
+                                Category = reader.IsDBNull(ordCategory) ? "" : reader.GetValue(ordCategory).ToString(),
+                                Quantity = Convert.ToInt32(reader.GetValue(ordQuantity)),
+                                Condition = reader.IsDBNull(ordCondition) ? "" : reader.GetValue(ordCondition).ToString(),
+                                Room = reader.IsDBNull(ordRoom) ? "General Store" : reader.GetValue(ordRoom).ToString()
                             });
                         }
                     }
