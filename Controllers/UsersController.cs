@@ -28,15 +28,22 @@ namespace HostelManagementSystem.Controllers
                     using (var cmd = new OleDbCommand(sql, conn))
                     using (var reader = cmd.ExecuteReader())
                     {
+                        // ⚡ Bolt: Cache column ordinals to avoid N string lookups
+                        int ordId = reader.GetOrdinal("UserID");
+                        int ordName = reader.GetOrdinal("FullName");
+                        int ordUser = reader.GetOrdinal("Username");
+                        int ordRole = reader.GetOrdinal("UserRole");
+                        int ordStatus = reader.GetOrdinal("Status");
+
                         while (reader.Read())
                         {
                             list.Add(new
                             {
-                                id = reader["UserID"],
-                                name = reader["FullName"],
-                                username = reader["Username"],
-                                role = reader["UserRole"],
-                                status = reader["Status"] == DBNull.Value ? "Active" : reader["Status"]
+                                id = reader.GetValue(ordId),
+                                name = reader.GetValue(ordName),
+                                username = reader.GetValue(ordUser),
+                                role = reader.GetValue(ordRole),
+                                status = reader.IsDBNull(ordStatus) ? "Active" : reader.GetValue(ordStatus)
                             });
                         }
                     }
