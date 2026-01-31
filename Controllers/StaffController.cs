@@ -19,15 +19,22 @@ namespace HostelManagementSystem.Controllers
                 OleDbCommand cmd = new OleDbCommand(sql, conn);
                 using (var reader = cmd.ExecuteReader())
                 {
+                    // Optimization: Cache ordinals to avoid string-based lookups in loop (O(1) vs O(N))
+                    int ordStaffID = reader.GetOrdinal("StaffID");
+                    int ordFullName = reader.GetOrdinal("FullName");
+                    int ordJobTitle = reader.GetOrdinal("JobTitle");
+                    int ordShift = reader.GetOrdinal("Shift");
+                    int ordContactNo = reader.GetOrdinal("ContactNo");
+
                     while (reader.Read())
                     {
                         staffList.Add(new
                         {
-                            Id = reader["StaffID"],
-                            Name = reader["FullName"],
-                            Title = reader["JobTitle"],
-                            Shift = reader["Shift"],
-                            Phone = reader["ContactNo"]
+                            Id = reader.GetValue(ordStaffID),
+                            Name = reader.GetValue(ordFullName),
+                            Title = reader.GetValue(ordJobTitle),
+                            Shift = reader.GetValue(ordShift),
+                            Phone = reader.GetValue(ordContactNo)
                         });
                     }
                 }
