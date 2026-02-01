@@ -28,15 +28,22 @@ namespace HostelManagementSystem.Controllers
                     using (var cmd = new OleDbCommand(sql, conn))
                     using (var reader = cmd.ExecuteReader())
                     {
+                        // ⚡ Bolt: Cache ordinals to avoid N string lookups per row
+                        int ordId = reader.GetOrdinal("EventID");
+                        int ordTitle = reader.GetOrdinal("Title");
+                        int ordDesc = reader.GetOrdinal("Description");
+                        int ordDate = reader.GetOrdinal("EventDate");
+                        int ordType = reader.GetOrdinal("EventType");
+
                         while (reader.Read())
                         {
                             list.Add(new
                             {
-                                Id = reader["EventID"],
-                                Title = reader["Title"].ToString(),
-                                Description = reader["Description"].ToString(),
-                                Date = Convert.ToDateTime(reader["EventDate"]).ToString("yyyy-MM-dd"),
-                                Type = reader["EventType"].ToString()
+                                Id = reader.GetValue(ordId),
+                                Title = reader.GetValue(ordTitle).ToString(),
+                                Description = reader.GetValue(ordDesc).ToString(),
+                                Date = Convert.ToDateTime(reader.GetValue(ordDate)).ToString("yyyy-MM-dd"),
+                                Type = reader.GetValue(ordType).ToString()
                             });
                         }
                     }
