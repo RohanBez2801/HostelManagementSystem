@@ -49,18 +49,28 @@ namespace HostelManagementSystem.Controllers
                 cmd.Parameters.AddWithValue("?", learnerId);
                 using (var reader = cmd.ExecuteReader())
                 {
+                    // Optimization: Cache ordinals to avoid string-based lookups in loop
+                    int ordIncidentDate = reader.GetOrdinal("IncidentDate");
+                    int ordDescription = reader.GetOrdinal("Description");
+                    int ordSeverity = reader.GetOrdinal("Severity");
+                    int ordReportedBy = reader.GetOrdinal("ReportedBy");
+                    int ordFatherEmail = reader.GetOrdinal("FatherEmail");
+                    int ordMotherEmail = reader.GetOrdinal("MotherEmail");
+                    int ordFatherPhone = reader.GetOrdinal("FatherPhone");
+
                     while (reader.Read())
                     {
-                        string email = reader["FatherEmail"]?.ToString();
-                        if (string.IsNullOrEmpty(email)) email = reader["MotherEmail"]?.ToString();
+                        // Use GetValue with ToString() to safely handle DBNull (returns empty string)
+                        string email = reader.GetValue(ordFatherEmail).ToString();
+                        if (string.IsNullOrEmpty(email)) email = reader.GetValue(ordMotherEmail).ToString();
 
                         history.Add(new
                         {
-                            Date = reader["IncidentDate"],
-                            Text = reader["Description"],
-                            Level = reader["Severity"],
-                            By = reader["ReportedBy"],
-                            ParentContact = reader["FatherPhone"]?.ToString(), // Useful for "Call Parent" button
+                            Date = reader.GetValue(ordIncidentDate),
+                            Text = reader.GetValue(ordDescription),
+                            Level = reader.GetValue(ordSeverity),
+                            By = reader.GetValue(ordReportedBy),
+                            ParentContact = reader.GetValue(ordFatherPhone).ToString(), // Useful for "Call Parent" button
                             ParentEmail = email
                         });
                     }
