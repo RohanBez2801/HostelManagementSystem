@@ -32,16 +32,24 @@ namespace HostelManagementSystem.Controllers
                     using (OleDbCommand cmd = new OleDbCommand(sql, conn))
                     using (var reader = cmd.ExecuteReader())
                     {
+                        // Optimization: Cache ordinals to avoid string-based lookups in loop
+                        int ordMaintenanceID = reader.GetOrdinal("MaintenanceID");
+                        int ordRoomNumber = reader.GetOrdinal("RoomNumber");
+                        int ordIssue = reader.GetOrdinal("IssueDescription");
+                        int ordPriority = reader.GetOrdinal("Priority");
+                        int ordStatus = reader.GetOrdinal("Status");
+                        int ordReportedDate = reader.GetOrdinal("ReportedDate");
+
                         while (reader.Read())
                         {
                             list.Add(new
                             {
-                                Id = reader["MaintenanceID"],
-                                RoomNumber = reader["RoomNumber"] != DBNull.Value ? reader["RoomNumber"].ToString() : "Deleted Room",
-                                IssueDescription = reader["IssueDescription"]?.ToString() ?? "-",
-                                Priority = reader["Priority"]?.ToString() ?? "Medium",
-                                Status = reader["Status"]?.ToString() ?? "Pending",
-                                ReportedDate = reader["ReportedDate"] != DBNull.Value ? Convert.ToDateTime(reader["ReportedDate"]) : DateTime.MinValue
+                                Id = reader.GetValue(ordMaintenanceID),
+                                RoomNumber = !reader.IsDBNull(ordRoomNumber) ? reader.GetValue(ordRoomNumber).ToString() : "Deleted Room",
+                                IssueDescription = reader.IsDBNull(ordIssue) ? "-" : reader.GetValue(ordIssue).ToString(),
+                                Priority = reader.IsDBNull(ordPriority) ? "Medium" : reader.GetValue(ordPriority).ToString(),
+                                Status = reader.IsDBNull(ordStatus) ? "Pending" : reader.GetValue(ordStatus).ToString(),
+                                ReportedDate = !reader.IsDBNull(ordReportedDate) ? Convert.ToDateTime(reader.GetValue(ordReportedDate)) : DateTime.MinValue
                             });
                         }
                     }
