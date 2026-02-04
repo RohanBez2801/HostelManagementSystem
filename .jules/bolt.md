@@ -5,3 +5,7 @@
 ## 2026-01-18 - Preserving API Contracts in Micro-optimizations
 **Learning:** Optimizing `StaffController` by adding `IsDBNull` checks and `ToString()` conversions changed the return type from `object` (nullable) to `string` (non-null). This broke the API contract, as consumers might expect `null` or specific types (like `int`).
 **Action:** When implementing `GetOrdinal` optimizations, stick to `reader.GetValue(ord)` if the goal is purely performance, unless explicitly tasked with improving null safety or type consistency. Avoid "improvements" that alter the data shape during performance refactoring.
+
+## 2026-01-22 - DBNull and Null-Coalescing Pitfalls
+**Learning:** `DBNull.Value.ToString()` returns an empty string `""`, not `null`. Using `reader["Col"]?.ToString() ?? "Default"` is ineffective for trapping `DBNull` values because the left side evaluates to `""`, bypassing the null-coalescing operator.
+**Action:** When optimizing, replicate the exact behavior (even if seemingly buggy) unless fixing the bug is explicitly requested. Use `reader[ordinal]` syntax instead of `reader.GetValue(ordinal)` for cleaner code that preserves this specific behavior.
