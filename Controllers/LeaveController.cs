@@ -33,22 +33,35 @@ namespace HostelManagementSystem.Controllers
                     using (var cmd = new OleDbCommand(sql, conn))
                     using (var reader = cmd.ExecuteReader())
                     {
+                        // Optimization: Cache ordinals to avoid string-based lookups in loop
+                        int ordLeaveID = reader.GetOrdinal("LeaveID");
+                        int ordSurname = reader.GetOrdinal("Surname");
+                        int ordNames = reader.GetOrdinal("Names");
+                        int ordFatherPhone = reader.GetOrdinal("FatherPhone");
+                        int ordMotherPhone = reader.GetOrdinal("MotherPhone");
+                        int ordLeaveType = reader.GetOrdinal("LeaveType");
+                        int ordDepartureDate = reader.GetOrdinal("DepartureDate");
+                        int ordExpectedReturnDate = reader.GetOrdinal("ExpectedReturnDate");
+                        int ordStatus = reader.GetOrdinal("Status");
+                        int ordContactPerson = reader.GetOrdinal("ContactPerson");
+
                         while (reader.Read())
                         {
-                            string pPhone = reader["FatherPhone"]?.ToString();
-                            if (string.IsNullOrEmpty(pPhone)) pPhone = reader["MotherPhone"]?.ToString();
-                            string fullName = $"{reader["Surname"]} {reader["Names"]}".Trim();
+                            // Use ordinal indexer for performance. DBNull.ToString() returns empty string.
+                            string pPhone = reader[ordFatherPhone]?.ToString();
+                            if (string.IsNullOrEmpty(pPhone)) pPhone = reader[ordMotherPhone]?.ToString();
+                            string fullName = $"{reader[ordSurname]} {reader[ordNames]}".Trim();
 
                             leaveRecords.Add(new
                             {
-                                id = reader["LeaveID"],
+                                id = reader[ordLeaveID],
                                 learnerName = fullName,
                                 parentPhone = pPhone ?? "N/A",
-                                type = reader["LeaveType"],
-                                departure = Convert.ToDateTime(reader["DepartureDate"]).ToString("yyyy-MM-dd HH:mm"),
-                                expectedReturn = Convert.ToDateTime(reader["ExpectedReturnDate"]).ToString("yyyy-MM-dd HH:mm"),
-                                status = reader["Status"].ToString(),
-                                contact = reader["ContactPerson"].ToString()
+                                type = reader[ordLeaveType],
+                                departure = Convert.ToDateTime(reader[ordDepartureDate]).ToString("yyyy-MM-dd HH:mm"),
+                                expectedReturn = Convert.ToDateTime(reader[ordExpectedReturnDate]).ToString("yyyy-MM-dd HH:mm"),
+                                status = reader[ordStatus].ToString(),
+                                contact = reader[ordContactPerson].ToString()
                             });
                         }
                     }
