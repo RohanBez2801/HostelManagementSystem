@@ -31,14 +31,22 @@ namespace HostelManagementSystem.Controllers
                     using (var cmd = new OleDbCommand(sql, conn))
                     using (var reader = cmd.ExecuteReader())
                     {
+                        // Optimization: Cache ordinals to avoid string-based lookups in loop
+                        int ordNoticeID = reader.GetOrdinal("NoticeID");
+                        int ordMessage = reader.GetOrdinal("Message");
+                        int ordPriority = reader.GetOrdinal("Priority");
+                        int ordDatePosted = reader.GetOrdinal("DatePosted");
+
                         while (reader.Read())
                         {
                             list.Add(new
                             {
-                                id = reader["NoticeID"],
-                                message = reader["Message"].ToString(),
-                                priority = reader["Priority"].ToString(),
-                                date = Convert.ToDateTime(reader["DatePosted"]).ToString("dd MMM yyyy HH:mm")
+                                id = reader.GetValue(ordNoticeID),
+                                // Handle DBNull for Message and Priority
+                                message = reader.IsDBNull(ordMessage) ? "" : reader.GetValue(ordMessage).ToString(),
+                                priority = reader.IsDBNull(ordPriority) ? "Normal" : reader.GetValue(ordPriority).ToString(),
+                                // Safe date conversion
+                                date = reader.IsDBNull(ordDatePosted) ? "" : Convert.ToDateTime(reader.GetValue(ordDatePosted)).ToString("dd MMM yyyy HH:mm")
                             });
                         }
                     }
