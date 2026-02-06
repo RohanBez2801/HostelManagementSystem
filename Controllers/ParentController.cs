@@ -26,15 +26,22 @@ namespace HostelManagementSystem.Controllers
                     using (var cmd = new OleDbCommand(sql, conn))
                     using (var reader = cmd.ExecuteReader())
                     {
+                        // Optimization: Cache ordinals to avoid string-based lookups in loop
+                        int ordParentID = reader.GetOrdinal("ParentID");
+                        int ordParentName = reader.GetOrdinal("ParentName");
+                        int ordPhone = reader.GetOrdinal("Phone");
+                        int ordEmail = reader.GetOrdinal("Email");
+                        int ordAddress = reader.GetOrdinal("Address");
+
                         while (reader.Read())
                         {
                             parents.Add(new
                             {
-                                Id = reader["ParentID"],
-                                Name = reader["ParentName"]?.ToString(),
-                                Phone = reader["Phone"]?.ToString(),
-                                Email = reader["Email"]?.ToString(),
-                                Address = reader["Address"]?.ToString()
+                                Id = reader.GetValue(ordParentID),
+                                Name = reader.IsDBNull(ordParentName) ? "" : reader.GetValue(ordParentName).ToString(),
+                                Phone = reader.IsDBNull(ordPhone) ? "" : reader.GetValue(ordPhone).ToString(),
+                                Email = reader.IsDBNull(ordEmail) ? "" : reader.GetValue(ordEmail).ToString(),
+                                Address = reader.IsDBNull(ordAddress) ? "" : reader.GetValue(ordAddress).ToString()
                             });
                         }
                     }
@@ -61,13 +68,23 @@ namespace HostelManagementSystem.Controllers
                         cmd.Parameters.AddWithValue("?", parentId);
                         using (var reader = cmd.ExecuteReader())
                         {
+                            // Optimization: Cache ordinals to avoid string-based lookups in loop
+                            int ordLearnerID = reader.GetOrdinal("LearnerID");
+                            int ordSurname = reader.GetOrdinal("Surname");
+                            int ordNames = reader.GetOrdinal("Names");
+                            int ordGrade = reader.GetOrdinal("Grade");
+                            int ordRoomID = reader.GetOrdinal("RoomID");
+
                             while (reader.Read())
                             {
+                                string surname = reader.IsDBNull(ordSurname) ? "" : reader.GetValue(ordSurname).ToString();
+                                string names = reader.IsDBNull(ordNames) ? "" : reader.GetValue(ordNames).ToString();
+
                                 children.Add(new {
-                                    Id = reader["LearnerID"],
-                                    Name = $"{reader["Surname"]} {reader["Names"]}",
-                                    Grade = reader["Grade"]?.ToString(),
-                                    RoomId = reader["RoomID"]
+                                    Id = reader.GetValue(ordLearnerID),
+                                    Name = $"{surname} {names}",
+                                    Grade = reader.IsDBNull(ordGrade) ? "" : reader.GetValue(ordGrade).ToString(),
+                                    RoomId = reader.GetValue(ordRoomID)
                                 });
                             }
                         }
